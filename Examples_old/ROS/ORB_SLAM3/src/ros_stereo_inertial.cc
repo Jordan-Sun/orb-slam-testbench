@@ -93,6 +93,7 @@ Harmonic_Elastic elastic_space {3};
 bool imu_period_need_update = false;
 bool image_period_need_update = false;
 bool ba_period_need_update = false;
+bool fallback = false;
 
 CPUStats last_stats, current_stats;
 double cpu_utilization;
@@ -888,7 +889,12 @@ void ImageGrabber::SyncWithImu()
       }
       if (++image_count >= image_to_skip) {
         image_count = 0;
-        mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas);
+        if (fallback) {
+          mpSLAM->TrackMonocular(imLeft,tImLeft,vImuMeas);
+        }
+        else {
+          mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas);
+        }
       } else {
 #ifdef DEBUG_HARMONIC
         std::cout << "image frame skipped" << std::endl;
