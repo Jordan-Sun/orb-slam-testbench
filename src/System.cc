@@ -406,7 +406,7 @@ Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, 
     }
 
     // Allow the use of TrackMonocular as a backup for Stereo when one of the cameras fails or is attacked.
-    if (mSensor == System::STEREO || mSensor == System::IMU_STEREO)
+    if (mSensor == STEREO || mSensor == IMU_STEREO)
     {
         cout << "Using TrackMonocular as a backup of TrackStereo" << endl;
     }
