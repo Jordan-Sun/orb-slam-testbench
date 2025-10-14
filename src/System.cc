@@ -1404,6 +1404,20 @@ void System::InsertTrackTime(double& time)
 }
 #endif
 
+// Switch the system to another sensor
+// Currently only used for switching from stereo to monocular as fallback
+void SwitchSensor(const eSensor sensor)
+{
+    if (mSensor == sensor)
+        return;
+    if (mSensor != IMU_STEREO || sensor != IMU_MONOCULAR)
+    {
+        cerr << "ERROR: Sensor switch not implemented" << endl;
+        return;
+    }
+    // TODO: Implement the switch from stereo to monocular
+}
+
 void System::SaveAtlas(int type){
     if(!mStrSaveAtlasToFile.empty())
     {
