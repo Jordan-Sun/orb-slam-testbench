@@ -895,11 +895,13 @@ void ImageGrabber::SyncWithImu()
         image_count = 0;
         if (fallback) {
           if (!recovered) {
-            std::cout << "Falling back to monocular" << std::endl;
+            std::cout << "Falling back to monocular...";
             // Ask SLAM system to switch to monocular
             mpSLAM->SwitchSensor(ORB_SLAM3::System::IMU_MONOCULAR);
             recovered = true;
+            std::cout << " done." << std::endl;
           }
+          std::cout << "Monocular tracking (fallback)" << std::endl;
           mpSLAM->TrackMonocular(imLeft,tImLeft,vImuMeas);
         }
         else {

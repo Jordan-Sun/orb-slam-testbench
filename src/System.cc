@@ -1418,16 +1418,16 @@ void System::SwitchSensor(const eSensor sensor)
         cout << "Switching sensor from " << SensorToString(mSensor) << " to " << SensorToString(sensor) << endl;
 
         // Initialize a new Local Mapping thread and launch but this time in monocular mode
-        auto newLocalMapper = new LocalMapping(this, mpAtlas, sensor==MONOCULAR || sensor==IMU_MONOCULAR,
+        auto tmpLocalMapper = new LocalMapping(this, mpAtlas, sensor==MONOCULAR || sensor==IMU_MONOCULAR,
                                         sensor==IMU_MONOCULAR || sensor==IMU_STEREO || sensor==IMU_RGBD, mpLocalMapper->strSequence);
-        auto newLocalMapping = new thread(&ORB_SLAM3::LocalMapping::Run,newLocalMapper);
-        newLocalMapper->mInitFr = mpLocalMapper->mInitFr;
-        newLocalMapper->mThFarPoints = mpLocalMapper->mThFarPoints;
-        newLocalMapper->mbFarPoints = mpLocalMapper->mbFarPoints;
+        auto tmpLocalMapping = new thread(&ORB_SLAM3::LocalMapping::Run,tmpLocalMapper);
+        tmpLocalMapper->mInitFr = mpLocalMapper->mInitFr;
+        tmpLocalMapper->mThFarPoints = mpLocalMapper->mThFarPoints;
+        tmpLocalMapper->mbFarPoints = mpLocalMapper->mbFarPoints;
         
         // Swap the thread pointers
-        std::swap(mptLocalMapping, newLocalMapping);
-        std::swap(mpLocalMapper, newLocalMapper);
+        std::swap(mptLocalMapping, tmpLocalMapping);
+        std::swap(mpLocalMapper, tmpLocalMapper);
 
         // Update pointers between threads
         mpTracker->SetLocalMapper(mpLocalMapper);
@@ -1436,10 +1436,19 @@ void System::SwitchSensor(const eSensor sensor)
         mpLocalMapper->SetTracker(mpTracker);
         mpLocalMapper->SetLoopCloser(mpLoopCloser);
 
+        // Clean up the Local Mapping thread before we terminate it to avoid "terminate called without an active exception" error
+        cout << "Stopping local mapping...";
+        // Request and then force local mapping to stop
+        tmpLocalMapper->RequestStop();
+        tmpLocalMapper->mbForceStop = true;
+        // Wait until the thread has stopped
+        tmpLocalMapping->join();
+        cout << " stopped" << endl;
+
         // Deallocate Local Mapping thread to terminate it without requesting stop
         // We don't care about the result any more as we are switching to monocular
-        delete mptLocalMapping;
-        delete newLocalMapper;
+        delete tmpLocalMapping;
+        delete tmpLocalMapper;
     }
     else
     {
