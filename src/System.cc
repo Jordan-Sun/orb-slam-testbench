@@ -1430,7 +1430,7 @@ void System::SwitchSensor(const eSensor sensor)
         std::swap(mpLocalMapper, tmpLocalMapper);
 
         // Switch sensor for the Tracker
-        mpTracker->ChangeSensor(sensor);
+        mpTracker->SwitchSensor(sensor);
 
         // Update pointers between threads
         mpTracker->SetLocalMapper(mpLocalMapper);

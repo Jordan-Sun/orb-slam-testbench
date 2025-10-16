@@ -58,11 +58,20 @@ public:
                     std::vector<cv::KeyPoint>& _keypoints,
                     cv::OutputArray _descriptors, std::vector<int> &vLappingArea);
 
+    int inline GetFeatures(){ 
+        return nfeatures;}
+
     int inline GetLevels(){
         return nlevels;}
 
     float inline GetScaleFactor(){
         return scaleFactor;}
+
+    int inline GetIniThFAST(){
+        return iniThFAST;}
+    
+    int inline GetMinThFAST(){
+        return minThFAST;}
 
     std::vector<float> inline GetScaleFactors(){
         return mvScaleFactor;

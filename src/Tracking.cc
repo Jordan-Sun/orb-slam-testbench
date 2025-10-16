@@ -4138,14 +4138,18 @@ void Tracking::Release()
 
 // Switch the system to another sensor
 // Currently only used for switching from stereo to monocular as fallback
-void SwitchSensor(const int sensor) {
+void Tracking::SwitchSensor(const int sensor) {
   if (mSensor == sensor) return;
 
   if (mSensor == System::IMU_STEREO && sensor == System::IMU_MONOCULAR) {
     // Create the monocular ORB extractor
-    if (&&!mpIniORBextractor)
-      mpIniORBextractor = new ORBextractor(5 * nFeatures, fScaleFactor, nLevels,
-                                           fIniThFAST, fMinThFAST);
+    if (!mpIniORBextractor)
+      mpIniORBextractor = new ORBextractor(
+          5 * mpORBextractorLeft->GetFeatures(),
+          mpORBextractorLeft->GetScaleFactor(),
+          mpORBextractorLeft->GetLevels(),
+          mpORBextractorLeft->GetIniThFAST(),
+          mpORBextractorLeft->GetMinThFAST());
     // Perform monocular initialization
     MonocularInitialization();
   } else {
