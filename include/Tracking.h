@@ -81,6 +81,8 @@ public:
     void SetStepByStep(bool bSet);
     bool GetStepByStep();
 
+    void ChangeSensor(const int sensor);
+
     // Load new settings
     // The focal lenght should be similar or scale prediction will fail when projecting points
     void ChangeCalibration(const string &strSettingPath);
@@ -260,6 +262,12 @@ protected:
     //ORB
     ORBextractor* mpORBextractorLeft, *mpORBextractorRight;
     ORBextractor* mpIniORBextractor;
+
+    int mNumORBFeatures;
+    float mORBScaleFactor;
+    int mNumORBLEvels;
+    int mIniThFAST;
+    int mMinThFAST;
 
     //BoW
     ORBVocabulary* mpORBVocabulary;

@@ -1436,6 +1436,8 @@ void System::SwitchSensor(const eSensor sensor)
         mpLocalMapper->SetTracker(mpTracker);
         mpLocalMapper->SetLoopCloser(mpLoopCloser);
 
+        mpTracker->ChangeSensor(sensor);
+
         // Clean up the Local Mapping thread before we terminate it to avoid "terminate called without an active exception" error
         cout << "Stopping local mapping...";
         // Request and then force local mapping to stop

@@ -48,7 +48,8 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mbOnlyTracking(false), mbMapUpdated(false), mbVO(false), mpORBVocabulary(pVoc), mpKeyFrameDB(pKFDB),
     mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(5.0),
-    mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL))
+    mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL)),
+    mNumORBFeatures(0), mORBScaleFactor(1.0f), mNumORBLEvels(0), mIniThFAST(0), mMinThFAST(0)
 {
     // Load camera parameters from settings file
     if(settings){
@@ -593,6 +594,12 @@ void Tracking::newParameterLoader(Settings *settings) {
     int fIniThFAST = settings->initThFAST();
     int fMinThFAST = settings->minThFAST();
     float fScaleFactor = settings->scaleFactor();
+
+    mNumORBFeatures = nFeatures;
+    mORBScaleFactor = fScaleFactor;
+    mNumORBLEvels = nLevels;
+    mIniThFAST = fIniThFAST;
+    mMinThFAST = fMinThFAST;
 
     mpORBextractorLeft = new ORBextractor(nFeatures,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);
 
@@ -1282,6 +1289,12 @@ bool Tracking::ParseORBParamFile(cv::FileStorage &fSettings)
         return false;
     }
 
+    mNumORBFeatures = nFeatures;
+    mORBScaleFactor = fScaleFactor;
+    mNumORBLEvels = nLevels;
+    mIniThFAST = fIniThFAST;
+    mMinThFAST = fMinThFAST;
+
     mpORBextractorLeft = new ORBextractor(nFeatures,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);
 
     if(mSensor==System::STEREO || mSensor==System::IMU_STEREO)
@@ -1449,6 +1462,25 @@ void Tracking::SetStepByStep(bool bSet)
 bool Tracking::GetStepByStep()
 {
     return bStepByStep;
+}
+
+void Tracking::ChangeSensor(const int sensor)
+{
+    if (mSensor == sensor)
+        return;
+
+    mSensor = sensor;
+
+    if((mSensor == System::MONOCULAR || mSensor == System::IMU_MONOCULAR) && !mpIniORBextractor)
+    {
+        mpIniORBextractor = new ORBextractor(5*mNumORBFeatures,mORBScaleFactor,mNumORBLEvels,mIniThFAST,mMinThFAST);
+    }
+
+    if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
+    {
+        unique_lock<mutex> lock(mMutexImuQueue);
+        mlQueueImuData.clear();
+    }
 }
 
 
