@@ -115,7 +115,11 @@ public:
     bool stopRequested();
 #endif
 
-public:
+    // Switch the system to another sensor
+    // Currently only used for switching from stereo to monocular as fallback
+    void SwitchSensor(const int sensor);
+
+   public:
 
     // Tracking states
     enum eTrackingState{
