@@ -1424,12 +1424,21 @@ void System::SwitchSensor(const eSensor sensor)
         newLocalMapper->mInitFr = mpLocalMapper->mInitFr;
         newLocalMapper->mThFarPoints = mpLocalMapper->mThFarPoints;
         newLocalMapper->mbFarPoints = mpLocalMapper->mbFarPoints;
-
+        
         // Swap the thread pointers
+        std::swap(mpLocalMapping, newLocalMapping);
         std::swap(mpLocalMapper, newLocalMapper);
+
+        // Update pointers between threads
+        mpTracker->SetLocalMapper(mpLocalMapper);
+        mpLoopCloser->SetTracker(mpTracker);
+
+        mpLocalMapper->SetTracker(mpTracker);
+        mpLocalMapper->SetLoopCloser(mpLoopCloser);
 
         // Deallocate Local Mapping thread to terminate it without requesting stop
         // We don't care about the result any more as we are switching to monocular
+        delete mpLocalMapping;
         delete newLocalMapper;
     }
     else
