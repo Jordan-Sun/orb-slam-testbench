@@ -212,6 +212,10 @@ public:
     void InsertTrackTime(double& time);
 #endif
 
+    // Switch the system to another sensor
+    // Currently only used for switching from stereo to monocular as fallback
+    void SwitchSensor(const eSensor sensor);
+
 private:
 
     void SaveAtlas(int type);

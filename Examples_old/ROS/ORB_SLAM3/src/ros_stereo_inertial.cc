@@ -93,7 +93,11 @@ Harmonic_Elastic elastic_space {3};
 bool imu_period_need_update = false;
 bool image_period_need_update = false;
 bool ba_period_need_update = false;
+
+// Flag to indicate that we need to fall back to monocular
 bool fallback = false;
+// Flag to indicate if the system has switched to monocular mode
+bool recovered = false;
 
 CPUStats last_stats, current_stats;
 double cpu_utilization;
@@ -890,10 +894,19 @@ void ImageGrabber::SyncWithImu()
       if (++image_count >= image_to_skip) {
         image_count = 0;
         if (fallback) {
+          if (!recovered) {
+            std::cout << "Falling back to monocular...";
+            // Ask SLAM system to switch to monocular
+            mpSLAM->SwitchSensor(ORB_SLAM3::System::IMU_MONOCULAR);
+            recovered = true;
+            std::cout << " done." << std::endl;
+          }
+          std::cout << "Monocular tracking (fallback)" << std::endl;
           mpSLAM->TrackMonocular(imLeft,tImLeft,vImuMeas);
         }
         else {
           mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas);
+          fallback = (rand() % 100 == 1); // 1% chance to fallback
         }
       } else {
 #ifdef DEBUG_HARMONIC

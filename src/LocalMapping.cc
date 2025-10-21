@@ -46,6 +46,8 @@ LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, 
     mNumLM = 0;
     mNumKFCulling=0;
 
+    mbForceStop = false;
+
 #ifdef REGISTER_TIMES
     nLBA_exec = 0;
     nLBA_abort = 0;
@@ -67,17 +69,16 @@ void LocalMapping::Run()
 {
     mbFinished = false;
 
-    while(1)
-    {
-        // Tracking will see that Local Mapping is busy
-        SetAcceptKeyFrames(false);
+    while (!mbForceStop) {
+        
+      // Tracking will see that Local Mapping is busy
+      SetAcceptKeyFrames(false);
 
-        // Check if there are keyframes in the queue
-        if(CheckNewKeyFrames() && !mbBadImu)
-        {
-            // BA Latency in ms
-            struct timespec start, end;
-            clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+      // Check if there are keyframes in the queue
+      if (CheckNewKeyFrames() && !mbBadImu) {
+        // BA Latency in ms
+        struct timespec start, end;
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
 #ifdef REGISTER_TIMES
             double timeLBA_ms = 0;

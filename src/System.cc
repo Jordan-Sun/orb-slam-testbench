@@ -38,6 +38,25 @@ namespace ORB_SLAM3
 
 Verbose::eLevel Verbose::th = Verbose::VERBOSITY_NORMAL;
 
+inline string SensorToString(ORB_SLAM3::System::eSensor sensor)
+{
+    switch(sensor)
+    {
+        case ORB_SLAM3::System::MONOCULAR:
+            return "Monocular";
+        case ORB_SLAM3::System::STEREO:
+            return "Stereo";
+        case ORB_SLAM3::System::RGBD:
+            return "RGB-D";
+        case ORB_SLAM3::System::IMU_MONOCULAR:
+            return "Monocular-Inertial";
+        case ORB_SLAM3::System::IMU_STEREO:
+            return "Stereo-Inertial";
+        case ORB_SLAM3::System::IMU_RGBD:
+            return "RGB-D-Inertial";
+    }
+}
+
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
                const bool bUseViewer, const int initFr, const string &strSequence):
     mSensor(sensor), mpViewer(static_cast<Viewer*>(NULL)), mbReset(false), mbResetActiveMap(false),
@@ -51,20 +70,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     "This is free software, and you are welcome to redistribute it" << endl <<
     "under certain conditions. See LICENSE.txt." << endl << endl;
 
-    cout << "Input sensor was set to: ";
-
-    if(mSensor==MONOCULAR)
-        cout << "Monocular" << endl;
-    else if(mSensor==STEREO)
-        cout << "Stereo" << endl;
-    else if(mSensor==RGBD)
-        cout << "RGB-D" << endl;
-    else if(mSensor==IMU_MONOCULAR)
-        cout << "Monocular-Inertial" << endl;
-    else if(mSensor==IMU_STEREO)
-        cout << "Stereo-Inertial" << endl;
-    else if(mSensor==IMU_RGBD)
-        cout << "RGB-D-Inertial" << endl;
+    cout << "Input sensor was set to: " << SensorToString(sensor) << endl;
 
     //Check settings file
     cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
@@ -192,6 +198,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
                              mpAtlas, mpKeyFrameDatabase, strSettingsFile, mSensor, settings_, strSequence);
 
     //Initialize the Local Mapping thread and launch
+    // Note: This seems to differ between monocular and stereo
     mpLocalMapper = new LocalMapping(this, mpAtlas, mSensor==MONOCULAR || mSensor==IMU_MONOCULAR,
                                      mSensor==IMU_MONOCULAR || mSensor==IMU_STEREO || mSensor==IMU_RGBD, strSequence);
     mptLocalMapping = new thread(&ORB_SLAM3::LocalMapping::Run,mpLocalMapper);
@@ -405,12 +412,7 @@ Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, 
             return Sophus::SE3f();
     }
 
-    // Allow the use of TrackMonocular as a backup for Stereo when one of the cameras fails or is attacked.
-    if (mSensor == System::STEREO || mSensor == System::IMU_STEREO)
-    {
-        cout << "Using TrackMonocular as a backup of TrackStereo" << endl;
-    }
-    else if(mSensor!=MONOCULAR && mSensor!=IMU_MONOCULAR)
+    if(mSensor!=MONOCULAR && mSensor!=IMU_MONOCULAR)
     {
         cerr << "ERROR: you called TrackMonocular but input sensor was not set to Monocular nor Monocular-Inertial." << endl;
         exit(-1);
@@ -1403,6 +1405,61 @@ void System::InsertTrackTime(double& time)
     mpTracker->vdTrackTotal_ms.push_back(time);
 }
 #endif
+
+// Switch the system to another sensor
+// Currently only used for switching from stereo to monocular as fallback
+void System::SwitchSensor(const eSensor sensor)
+{
+    if (mSensor == sensor)
+        return;
+    // Switching from stereo to monocular both with IMU
+    if (mSensor == IMU_STEREO && sensor == IMU_MONOCULAR)
+    {
+        cout << "Switching sensor from " << SensorToString(mSensor) << " to " << SensorToString(sensor) << endl;
+
+        // Initialize a new Local Mapping thread and launch but this time in monocular mode
+        auto tmpLocalMapper = new LocalMapping(this, mpAtlas, sensor==MONOCULAR || sensor==IMU_MONOCULAR,
+                                        sensor==IMU_MONOCULAR || sensor==IMU_STEREO || sensor==IMU_RGBD, mpLocalMapper->strSequence);
+        auto tmpLocalMapping = new thread(&ORB_SLAM3::LocalMapping::Run,tmpLocalMapper);
+        tmpLocalMapper->mInitFr = mpLocalMapper->mInitFr;
+        tmpLocalMapper->mThFarPoints = mpLocalMapper->mThFarPoints;
+        tmpLocalMapper->mbFarPoints = mpLocalMapper->mbFarPoints;
+        
+        // Swap the thread pointers
+        std::swap(mptLocalMapping, tmpLocalMapping);
+        std::swap(mpLocalMapper, tmpLocalMapper);
+
+        // Switch sensor for the Tracker
+        mpTracker->SwitchSensor(sensor);
+
+        // Update pointers between threads
+        mpTracker->SetLocalMapper(mpLocalMapper);
+        mpLoopCloser->SetTracker(mpTracker);
+
+        mpLocalMapper->SetTracker(mpTracker);
+        mpLocalMapper->SetLoopCloser(mpLoopCloser);
+
+        // Clean up the Local Mapping thread before we terminate it to avoid "terminate called without an active exception" error
+        cout << "Stopping local mapping...";
+        // Request and then force local mapping to stop
+        tmpLocalMapper->RequestStop();
+        tmpLocalMapper->mbForceStop = true;
+        // Wait until the thread has stopped
+        tmpLocalMapping->join();
+        cout << " stopped" << endl;
+
+        // Deallocate Local Mapping thread to terminate it without requesting stop
+        // We don't care about the result any more as we are switching to monocular
+        delete tmpLocalMapping;
+        delete tmpLocalMapper;
+    }
+    else
+    {
+        cerr << "ERROR: Sensor switch not implemented" << endl;
+        return;
+    }
+    mSensor = sensor;
+}
 
 void System::SaveAtlas(int type){
     if(!mStrSaveAtlasToFile.empty())

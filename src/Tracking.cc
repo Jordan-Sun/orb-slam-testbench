@@ -596,6 +596,7 @@ void Tracking::newParameterLoader(Settings *settings) {
 
     mpORBextractorLeft = new ORBextractor(nFeatures,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);
 
+    // This is different between stereo and monocular
     if(mSensor==System::STEREO || mSensor==System::IMU_STEREO)
         mpORBextractorRight = new ORBextractor(nFeatures,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);
 
@@ -4134,5 +4135,29 @@ void Tracking::Release()
     mbStopRequested = false;
 }
 #endif
+
+// Switch the system to another sensor
+// Currently only used for switching from stereo to monocular as fallback
+void Tracking::SwitchSensor(const int sensor) {
+  if (mSensor == sensor) return;
+
+  if (mSensor == System::IMU_STEREO && sensor == System::IMU_MONOCULAR) {
+    // Create the monocular ORB extractor
+    if (!mpIniORBextractor)
+      mpIniORBextractor = new ORBextractor(
+          5 * mpORBextractorLeft->GetFeatures(),
+          mpORBextractorLeft->GetScaleFactor(),
+          mpORBextractorLeft->GetLevels(),
+          mpORBextractorLeft->GetIniThFAST(),
+          mpORBextractorLeft->GetMinThFAST());
+    // Perform monocular initialization
+    MonocularInitialization();
+  } else {
+    cerr << "ERROR: Sensor switch not implemented" << endl;
+    return;
+  }
+
+  mSensor = sensor;
+}
 
 } //namespace ORB_SLAM
