@@ -16,6 +16,8 @@
 * If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define FALLBACK_TO_MONO
+
 #include<iostream>
 #include<algorithm>
 #include<fstream>
@@ -94,10 +96,14 @@ bool imu_period_need_update = false;
 bool image_period_need_update = false;
 bool ba_period_need_update = false;
 
-// Flag to indicate that we need to fall back to monocular
-bool fallback = false;
+#ifdef FALLBACK_TO_MONO
+// Iteration at which the system should fallback to monocular
+// Max means it will never fallback
+unsigned int current_iteration = 0;
+unsigned int fallback_iteration = std::numeric_limits<unsigned int>::max();
 // Flag to indicate if the system has switched to monocular mode
 bool recovered = false;
+#endif /* FALLBACK_TO_MONO */
 
 CPUStats last_stats, current_stats;
 double cpu_utilization;
@@ -632,6 +638,13 @@ int main(int argc, char **argv)
 
 #endif
 
+#ifdef FALLBACK_TO_MONO
+  // Uniform randomly select the iteration to fallback
+  std::srand(std::time(0));  // Use current time as seed for random generator
+  fallback_iteration = std::rand() % (3000);
+  std::cout << "The system will fallback to monocular at iteration: " << fallback_iteration << std::endl;
+#endif /* FALLBACK_TO_MONO */
+
   // Create SLAM system. It initializes all system threads and gets ready to process frames.
   ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::IMU_STEREO,true);
 
@@ -893,7 +906,8 @@ void ImageGrabber::SyncWithImu()
       }
       if (++image_count >= image_to_skip) {
         image_count = 0;
-        if (fallback) {
+#ifdef FALLBACK_TO_MONO
+        if (++current_iteration >= fallback_iteration) {
           if (!recovered) {
             std::cout << "Falling back to monocular...";
             // Ask SLAM system to switch to monocular
@@ -901,13 +915,14 @@ void ImageGrabber::SyncWithImu()
             recovered = true;
             std::cout << " done." << std::endl;
           }
-          std::cout << "Monocular tracking (fallback)" << std::endl;
           mpSLAM->TrackMonocular(imLeft,tImLeft,vImuMeas);
         }
         else {
           mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas);
-          fallback = (rand() % 100 == 1); // 1% chance to fallback
         }
+#else
+        mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas);
+#endif /* FALLBACK_TO_MONO */
       } else {
 #ifdef DEBUG_HARMONIC
         std::cout << "image frame skipped" << std::endl;
