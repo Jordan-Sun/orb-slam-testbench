@@ -9,7 +9,7 @@ usage() {
 
 # Use the first argument as the base path to the data to collect
 DATA_PATH=$1
-cd $DATA_PATH
+cd "$DATA_PATH"
 if [ $? -ne 0 ]; then
     echo "Error: Cannot change directory to $DATA_PATH"
     usage
@@ -41,16 +41,23 @@ ROSCORE_PID=$!
 # Sleep for 5 seconds to ensure roscore starts properly
 sleep 5
 
-for i in $(seq $START_ITER $NUM_ITERATIONS)
+for i in $(seq "$START_ITER" "$NUM_ITERATIONS")
 do
+    ITER_DIR="iteration_$i"
+    # Skip the iteration if it already exists
+    if [ -d "$ITER_DIR" ]; then
+        echo "Directory $ITER_DIR already exists, skipping iteration $i"
+        continue
+    fi
+    
+    # Create a directory for this iteration
+    mkdir -p "$ITER_DIR"
+    cd "$ITER_DIR"
     echo "Starting iteration $i"
 
-    # Create a directory for this iteration
-    ITER_DIR="iteration_$i"
-    mkdir -p $ITER_DIR
-    cd $ITER_DIR
     # Start ORB SLAM in the background and pipe its output to a log file
-    taskset -c 2 rosrun ORB_SLAM3 Stereo_Inertial /home/orb-slam-elastic/Vocabulary/ORBvoc.txt /home/orb-slam-elastic/Examples_old/Stereo-Inertial/EuRoC.yaml true &> orb_slam.log &
+    # use POSIX-compatible redirection so script works under /bin/sh too
+    taskset -c 2 rosrun ORB_SLAM3 Stereo_Inertial /home/orb-slam-elastic/Vocabulary/ORBvoc.txt /home/orb-slam-elastic/Examples_old/Stereo-Inertial/EuRoC.yaml true >> orb_slam.log 2>&1 &
     ORB_PID=$!
 
     # Sleep for 5 seconds to ensure ORB SLAM starts properly
@@ -59,11 +66,11 @@ do
     # Play the bag file, and kill the ORB SLAM process with SIGINT when done
     rosbag play /data/MH_01_easy.bag /cam0/image_raw:=/camera/left/image_raw /cam1/image_raw:=/camera/right/image_raw /imu0:=/imu
     sleep 1
-    kill -SIGINT $ORB_PID
+    kill -SIGINT "$ORB_PID"
 
     # Leave the directory
     cd ..
-done
+done;
 
 # Kill the roscore process
-kill -SIGINT $ROSCORE_PID
+kill -SIGINT "$ROSCORE_PID"
