@@ -41,8 +41,10 @@ ROSCORE_PID=$!
 # Sleep for 5 seconds to ensure roscore starts properly
 sleep 5
 
-for i in $(seq 1 $NUM_ITERATIONS)
+for i in $(seq $START_ITER $NUM_ITERATIONS)
 do
+    echo "Starting iteration $i"
+
     # Create a directory for this iteration
     ITER_DIR="iteration_$i"
     mkdir -p $ITER_DIR
