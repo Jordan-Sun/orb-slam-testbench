@@ -140,27 +140,6 @@ void read_cpu_stats(CPUStats* stats) {
   fclose(stat_file);
 }
 
-#ifdef SCHED_EDF_VDSD
-static int set_deadline(pid_t pid, unsigned long runtime,
-                        unsigned long deadline, unsigned long period) {
-  struct sched_attr attr;
-  attr.size = SCHED_ATTR_SIZE_VER1;
-  attr.sched_policy = SCHED_DEADLINE;
-  attr.sched_flags = SCHED_FLAG_RECLAIM | SCHED_FLAG_DL_OVERRUN;
-  attr.sched_runtime = runtime;
-  attr.sched_deadline = deadline;
-  attr.sched_period = period;
-
-  return syscall(SYS_sched_setattr, pid, &attr, 0);
-}
-
-static int set_own_deadline(unsigned long runtime, unsigned long deadline,
-                            unsigned long period) {
-  pid_t pid = getpid();
-  return set_deadline(pid, runtime, deadline, period);
-}
-#endif /* SCHED_EDF_VDSD */
-
 class ImuGrabber {
  public:
   ImuGrabber() {};
@@ -683,7 +662,7 @@ int main(int argc, char** argv) {
 
   // Create SLAM system. It initializes all system threads and gets ready to
   // process frames.
-  ORB_SLAM3::System O(argv[1], argv[2], ORB_SLAM3::System::IMU_STEREO, true);
+  ORB_SLAM3::System SLAM(argv[1], argv[2], ORB_SLAM3::System::IMU_STEREO, true);
 
   // Avoid runtime re-allocation
   imu_exe_times.reserve(30000);
@@ -748,6 +727,18 @@ int main(int argc, char** argv) {
   // n.subscribe("/camera/right/image_raw", 100,
   // &ImageGrabber::GrabImageRight,&igb);
 
+#ifdef SCHED_EDF_VDSD
+  // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
+  // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
+  // Start all threads with the lowest SCHED_FIFO priority.
+  struct sched_param sch_params;
+  sch_params.sched_priority = 1;
+  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+    perror("pthread_setschedparam failed");
+    return 1;
+  }
+#endif /* SCHED_EDF_VDSD */
+
   std::thread sync_thread(&ImageGrabber::SyncWithImu, &igb);
 
   std::thread imu_grab_thread(&ImuGrabber::imu_thread_function, &imugb);
@@ -759,39 +750,6 @@ int main(int argc, char** argv) {
 #ifdef RESTRICT_BANDWIDTH
   std::thread t(update_cpu_utilization);
 #endif
-
-#ifdef SCHED_EDF_VDSD
-  // Use native handle to call SCHED_DEADLINE of Linux kernel to schedule with
-  // EDF_VDSD
-  struct sched_attr attr;
-  attr.size = sizeof(attr);
-  attr.sched_policy = SCHED_DEADLINE;
-  attr.sched_flags = SCHED_FLAG_RECLAIM | SCHED_FLAG_DL_OVERRUN;
-  attr.sched_period = 0;  // default to deadline
-
-  // elastic_space.add_task(Task{5, 20, 0.0015, 0.263});
-  // elastic_space.add_task(Task{50, 200, 31.3, 4006});
-  // elastic_space.add_task(Task{50, 1200, 270, 114000});
-
-  // Imu thread
-  attr.sched_runtime = 1500;      // 0.0015 ms = 1500 ns
-  attr.sched_deadline = 5000000;  // 5 ms
-  if (syscall(SYS_sched_setattr, imu_grab_thread.native_handle(), &attr, 0) <
-      0) {
-    perror("sched_setattr imu_grab_thread");
-  }
-  // Both image threads
-  attr.sched_runtime = 31300000;   // 31.3 ms = 31300000 ns
-  attr.sched_deadline = 50000000;  // 50 ms
-  if (syscall(SYS_sched_setattr, right_img_grab_thread.native_handle(), &attr,
-              0) < 0) {
-    perror("sched_setattr right_img_grab_thread");
-  }
-  if (syscall(SYS_sched_setattr, left_img_grab_thread.native_handle(), &attr,
-              0) < 0) {
-    perror("sched_setattr left_img_grab_thread");
-  }
-#endif /* SCHED_EDF_VDSD */
 
   ros::AsyncSpinner spinner(4);  // Use 4 threads
   spinner.start();
@@ -887,35 +845,42 @@ cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr& img_msg) {
 void ImageGrabber::SyncWithImu() {
   struct timespec start, end;
   double time_spent;
+  bool fallback = false;
 
   const double maxTimeDiff = 0.01;
   while (1) {
     cv::Mat imLeft, imRight;
     double tImLeft = 0, tImRight = 0;
-    if (!imgLeftBuf.empty() && !imgRightBuf.empty() &&
-        !mpImuGb->imuBuf.empty()) {
+
+    // Upon fallback, ignore the right image buffer
+    if (!imgLeftBuf.empty() && !mpImuGb->imuBuf.empty() &&
+        (fallback || !imgRightBuf.empty())) {
       tImLeft = imgLeftBuf.front()->header.stamp.toSec();
-      tImRight = imgRightBuf.front()->header.stamp.toSec();
 
-      this->mBufMutexRight.lock();
-      while ((tImLeft - tImRight) > maxTimeDiff && imgRightBuf.size() > 1) {
-        imgRightBuf.pop();
+      if (!fallback) {
         tImRight = imgRightBuf.front()->header.stamp.toSec();
-      }
-      this->mBufMutexRight.unlock();
 
-      this->mBufMutexLeft.lock();
-      while ((tImRight - tImLeft) > maxTimeDiff && imgLeftBuf.size() > 1) {
-        imgLeftBuf.pop();
-        tImLeft = imgLeftBuf.front()->header.stamp.toSec();
-      }
-      this->mBufMutexLeft.unlock();
+        this->mBufMutexRight.lock();
+        while ((tImLeft - tImRight) > maxTimeDiff && imgRightBuf.size() > 1) {
+          imgRightBuf.pop();
+          tImRight = imgRightBuf.front()->header.stamp.toSec();
+        }
+        this->mBufMutexRight.unlock();
 
-      if ((tImLeft - tImRight) > maxTimeDiff ||
-          (tImRight - tImLeft) > maxTimeDiff) {
-        // std::cout << "big time difference" << std::endl;
-        continue;
+        this->mBufMutexLeft.lock();
+        while ((tImRight - tImLeft) > maxTimeDiff && imgLeftBuf.size() > 1) {
+          imgLeftBuf.pop();
+          tImLeft = imgLeftBuf.front()->header.stamp.toSec();
+        }
+        this->mBufMutexLeft.unlock();
+
+        if ((tImLeft - tImRight) > maxTimeDiff ||
+            (tImRight - tImLeft) > maxTimeDiff) {
+          // std::cout << "big time difference" << std::endl;
+          continue;
+        }
       }
+
       if (tImLeft > mpImuGb->imuBuf.back()->header.stamp.toSec()) continue;
 
       this->mBufMutexLeft.lock();
@@ -923,10 +888,12 @@ void ImageGrabber::SyncWithImu() {
       imgLeftBuf.pop();
       this->mBufMutexLeft.unlock();
 
-      this->mBufMutexRight.lock();
-      imRight = GetImage(imgRightBuf.front());
-      imgRightBuf.pop();
-      this->mBufMutexRight.unlock();
+      if (!fallback) {
+        this->mBufMutexRight.lock();
+        imRight = GetImage(imgRightBuf.front());
+        imgRightBuf.pop();
+        this->mBufMutexRight.unlock();
+      }
 
       vector<ORB_SLAM3::IMU::Point> vImuMeas;
       mpImuGb->mBufMutex.lock();
@@ -949,7 +916,7 @@ void ImageGrabber::SyncWithImu() {
       mpImuGb->mBufMutex.unlock();
       if (mbClahe) {
         mClahe->apply(imLeft, imLeft);
-        mClahe->apply(imRight, imRight);
+        if (!fallback) mClahe->apply(imRight, imRight);
       }
 
       // // End of Fusion in ms
@@ -964,12 +931,13 @@ void ImageGrabber::SyncWithImu() {
 
       if (do_rectify) {
         cv::remap(imLeft, imLeft, M1l, M2l, cv::INTER_LINEAR);
-        cv::remap(imRight, imRight, M1r, M2r, cv::INTER_LINEAR);
+        if (!fallback) cv::remap(imRight, imRight, M1r, M2r, cv::INTER_LINEAR);
       }
       if (++image_count >= image_to_skip) {
         image_count = 0;
 #ifdef FALLBACK_TO_MONO
         if (++current_iteration >= fallback_iteration) {
+          fallback = true;
           if (!recovered) {
             std::cout << "Falling back to monocular...";
             // Ask SLAM system to switch to monocular
