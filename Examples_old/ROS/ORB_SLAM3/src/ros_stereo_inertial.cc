@@ -79,7 +79,9 @@ typedef struct {
 vector<std::pair<double, double>> imu_exe_times;
 vector<std::pair<double, double>> left_camera_exe_times;
 vector<std::pair<double, double>> right_camera_exe_times;
-vector<std::pair<double, double>> tracking_exe_times;
+vector<std::pair<double, double>> tracking_checkpoint_times;
+// Extra bool indicating whether tracking has fallen back to monocular
+vector<std::tuple<bool, double, double>> tracking_full_times;
 vector<std::pair<double, double>> ba_exe_times;
 vector<std::pair<double, double>> fusion_exe_times;
 vector<std::pair<double, double>> loop_closing_exe_times;
@@ -244,20 +246,38 @@ int times_saver() {
   //////////////////////////////////////////////
 
   // Open a file in write mode
-  std::ofstream tracking_exe_times_file("ms_tracking_exe_times_file.txt");
+  std::ofstream tracking_checkpoint_times_file("ms_tracking_checkpoint_times_file.txt");
 
   // Check if the file is open
-  if (!tracking_exe_times_file.is_open()) {
+  if (!tracking_checkpoint_times_file.is_open()) {
     std::cerr << "Unable to open file";
     return 1;
   }
   // Write the vector data to the file
-  for (const auto& val : tracking_exe_times) {
-    tracking_exe_times_file << setprecision(19) << val.first << setprecision(6)
+  for (const auto& val : tracking_checkpoint_times) {
+    tracking_checkpoint_times_file << setprecision(19) << val.first << setprecision(6)
                             << "," << val.second << '\n';
   }
   // Close the file
-  tracking_exe_times_file.close();
+  tracking_checkpoint_times_file.close();
+  // End
+  //////////////////////////////////////////////
+
+  // Open a file in write mode
+  std::ofstream tracking_full_times_file("ms_tracking_full_times_file.txt");
+
+  // Check if the file is open
+  if (!tracking_full_times_file.is_open()) {
+    std::cerr << "Unable to open file";
+    return 1;
+  }
+  // Write the vector data to the file
+  for (const auto& val : tracking_full_times) {
+    tracking_full_times_file << (std::get<0>(val) ? "mono" : "stereo") << "," << setprecision(19) << std::get<1>(val) << setprecision(6)
+                            << "," << std::get<2>(val) << '\n';
+  }
+  // Close the file
+  tracking_full_times_file.close();
   // End
   //////////////////////////////////////////////
   // Open a file in write mode
@@ -668,7 +688,8 @@ int main(int argc, char** argv) {
   imu_exe_times.reserve(30000);
   left_camera_exe_times.reserve(3000);
   right_camera_exe_times.reserve(3000);
-  tracking_exe_times.reserve(3000);
+  tracking_checkpoint_times.reserve(3000);
+  tracking_full_times.reserve(3000);
   fusion_exe_times.reserve(3000);
   ba_exe_times.reserve(3000);
 
@@ -852,6 +873,9 @@ void ImageGrabber::SyncWithImu() {
     cv::Mat imLeft, imRight;
     double tImLeft = 0, tImRight = 0;
 
+    // Time to checkpoint
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+
     // Upon fallback, ignore the right image buffer
     if (!imgLeftBuf.empty() && !mpImuGb->imuBuf.empty() &&
         (fallback || !imgRightBuf.empty())) {
@@ -919,15 +943,15 @@ void ImageGrabber::SyncWithImu() {
         if (!fallback) mClahe->apply(imRight, imRight);
       }
 
-      // // End of Fusion in ms
-      // clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-      // time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
-      //                   (end.tv_nsec - start.tv_nsec) / 1000000.0;
-      // fusion_exe_times.push_back(time_spent);
-
-      // Tracking Latency
-      struct timespec start, end;
-      clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+      // End of checkpoint
+      if (!fallback) {
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
+                     (end.tv_nsec - start.tv_nsec) / 1000000.0;
+        std::pair<double, double> curr_pair =
+            std::make_pair(tImLeft, time_spent);
+        tracking_checkpoint_times.push_back(curr_pair);
+      }
 
       if (do_rectify) {
         cv::remap(imLeft, imLeft, M1l, M2l, cv::INTER_LINEAR);
@@ -962,8 +986,9 @@ void ImageGrabber::SyncWithImu() {
       time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
                    (end.tv_nsec - start.tv_nsec) / 1000000.0;
 
-      std::pair<double, double> curr_pair = std::make_pair(tImLeft, time_spent);
-      tracking_exe_times.push_back(curr_pair);
+      std::tuple<bool, double, double> curr_tuple =
+          std::make_tuple(fallback, tImLeft, time_spent);
+      tracking_full_times.push_back(curr_tuple);
 
       // End of Tracking
 
