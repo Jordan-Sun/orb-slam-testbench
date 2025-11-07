@@ -67,8 +67,8 @@ void LocalMapping::SetTracker(Tracking *pTracker)
 
 void LocalMapping::Run() {
   struct timespec next_iteration_time, current_time;
-//   const long long period_ns = 2000000000;  // 1.5 s
-//   const long long second_ns = 1000000000;  // 1 second
+  const long long period_ns = 750000000;    // 750 ms
+  const long long second_ns = 1000000000;  // 1 second
 
   mbFinished = false;
   
@@ -78,6 +78,7 @@ void LocalMapping::Run() {
   while (!mbForceStop) {
     // BA Latency in ms
     struct timespec start, end;
+    double frame_time = -1;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
     // Tracking will see that Local Mapping is busy
@@ -171,7 +172,7 @@ void LocalMapping::Run() {
                     }
 
                 }
-                // frame_time = mpCurrentKeyFrame->mTimeStamp;
+                frame_time = mpCurrentKeyFrame->mTimeStamp;
 // End of BA latency in ms
 
 #ifdef REGISTER_TIMES
@@ -294,11 +295,11 @@ void LocalMapping::Run() {
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
         double time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
                             (end.tv_nsec - start.tv_nsec) / 1000000.0;
-        // To grasp what the period is, measure wall clock time spent
-        clock_gettime(CLOCK_MONOTONIC, &current_time);
-        double frame_time = (current_time.tv_sec - next_iteration_time.tv_sec) * 1000.0 +
-                            (current_time.tv_nsec - next_iteration_time.tv_nsec) / 1000000.0;
-        next_iteration_time = current_time;
+        // // To grasp what the period is, measure wall clock time spent
+        // clock_gettime(CLOCK_MONOTONIC, &current_time);
+        // double frame_time = (current_time.tv_sec - next_iteration_time.tv_sec) * 1000.0 +
+        //                     (current_time.tv_nsec - next_iteration_time.tv_nsec) / 1000000.0;
+        // next_iteration_time = current_time;
         std::pair<double, double> curr_pair =
             std::make_pair(frame_time, time_spent);
         ba_exe_times.push_back(curr_pair);
@@ -306,38 +307,27 @@ void LocalMapping::Run() {
         if(CheckFinish())
             break;
 
-        usleep(3000);
-        // // Increment the next iteration time by period
-        // next_iteration_time.tv_nsec += period_ns;
-        // if (next_iteration_time.tv_nsec >= second_ns) {
-        //   next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
-        //   next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
-        // }
-        // // If we are behind schedule, print deadline miss and increment once to catch up
-        // clock_gettime(CLOCK_MONOTONIC, &current_time);
-        // if ((current_time.tv_sec > next_iteration_time.tv_sec) ||
-        //     (current_time.tv_sec == next_iteration_time.tv_sec &&
-        //      current_time.tv_nsec > next_iteration_time.tv_nsec)) {
-        //   std::cout << "Deadline " << next_iteration_time.tv_sec << "."
-        //             << next_iteration_time.tv_nsec
-        //             << " missed in Local Mapping, current time "
-        //             << current_time.tv_sec << "." << current_time.tv_nsec
-        //             << std::endl;
-        // }
-
-        // while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
-        //        (current_time.tv_sec == next_iteration_time.tv_sec &&
-        //         current_time.tv_nsec > next_iteration_time.tv_nsec)) {
-        //   next_iteration_time.tv_nsec += period_ns;
-        //   if (next_iteration_time.tv_nsec >= second_ns) {
-        //     next_iteration_time.tv_sec +=
-        //         next_iteration_time.tv_nsec / second_ns;
-        //     next_iteration_time.tv_nsec =
-        //         next_iteration_time.tv_nsec % second_ns;
-        //   }
-        // }
-        // clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
-        //                 NULL);
+        // usleep(3000);
+        // Increment the next iteration time by period
+        next_iteration_time.tv_nsec += period_ns;
+        if (next_iteration_time.tv_nsec >= second_ns) {
+          next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+          next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+        }
+        // If we are behind schedule, print deadline miss and increment once to catch up
+        clock_gettime(CLOCK_MONOTONIC, &current_time);
+        if ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+            (current_time.tv_sec == next_iteration_time.tv_sec &&
+             current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+          std::cout << "Deadline " << next_iteration_time.tv_sec << "."
+                    << next_iteration_time.tv_nsec
+                    << " missed in Local Mapping, current time "
+                    << current_time.tv_sec << "." << current_time.tv_nsec
+                    << std::endl;
+        }
+        next_iteration_time = current_time;
+        clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
+                        NULL);
     }
 
     SetFinish();
