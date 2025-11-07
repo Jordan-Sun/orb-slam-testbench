@@ -93,18 +93,17 @@ void LoopClosing::Run()
 
     while(1)
     {
+      // NEW LOOP AND MERGE DETECTION ALGORITHM
+      //----------------------------
+      struct timespec start, end;
+      double frame_time = -1;
+      clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
-        //NEW LOOP AND MERGE DETECTION ALGORITHM
-        //----------------------------
-
-
-        if(CheckNewKeyFrames())
-        {
-            if(mpLastCurrentKF)
-            {
-                mpLastCurrentKF->mvpLoopCandKFs.clear();
-                mpLastCurrentKF->mvpMergeCandKFs.clear();
-            }
+      if (CheckNewKeyFrames()) {
+        if (mpLastCurrentKF) {
+          mpLastCurrentKF->mvpLoopCandKFs.clear();
+          mpLastCurrentKF->mvpMergeCandKFs.clear();
+        }
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_StartPR = std::chrono::steady_clock::now();
 #endif
@@ -266,8 +265,6 @@ void LoopClosing::Run()
                         mvpLoopMapPoints = mvpLoopMPs;
 
                         // BA Latency in ms
-                        struct timespec start, end;
-                        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
 #ifdef REGISTER_TIMES
                         std::chrono::steady_clock::time_point time_StartLoop = std::chrono::steady_clock::now();
@@ -282,11 +279,7 @@ void LoopClosing::Run()
                         double timeLoopTotal = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(time_EndLoop - time_StartLoop).count();
                         vdLoopTotal_ms.push_back(timeLoopTotal);
 #endif
-                        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-                        double time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
-                                                    (end.tv_nsec - start.tv_nsec) / 1000000.0;
-                        std::pair<double, double> curr_pair = std::make_pair(mpCurrentKF->mTimeStamp, time_spent);
-                        loop_closing_exe_times.push_back(curr_pair);
+                        frame_time = mpCurrentKF->mTimeStamp;
                         // End of latency loop closing
 
                         mnNumCorrection += 1;
@@ -308,6 +301,14 @@ void LoopClosing::Run()
         }
 
         ResetIfRequested();
+
+        // End of entire loop closing loop
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        double time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
+                            (end.tv_nsec - start.tv_nsec) / 1000000.0;
+        std::pair<double, double> curr_pair =
+            std::make_pair(frame_time, time_spent);
+        loop_closing_exe_times.push_back(curr_pair);
 
         if(CheckFinish()){
             break;

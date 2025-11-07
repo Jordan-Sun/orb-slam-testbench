@@ -80,8 +80,8 @@ vector<std::pair<double, double>> imu_exe_times;
 vector<std::pair<double, double>> left_camera_exe_times;
 vector<std::pair<double, double>> right_camera_exe_times;
 vector<std::pair<double, double>> tracking_checkpoint_times;
-// Extra bool indicating whether tracking has fallen back to monocular
-vector<std::tuple<bool, double, double>> tracking_full_times;
+vector<std::pair<double, double>> tracking_stereo_times;
+vector<std::pair<double, double>> tracking_mono_times;
 vector<std::pair<double, double>> ba_exe_times;
 vector<std::pair<double, double>> fusion_exe_times;
 vector<std::pair<double, double>> loop_closing_exe_times;
@@ -246,7 +246,8 @@ int times_saver() {
   //////////////////////////////////////////////
 
   // Open a file in write mode
-  std::ofstream tracking_checkpoint_times_file("ms_tracking_checkpoint_times_file.txt");
+  std::ofstream tracking_checkpoint_times_file(
+      "ms_tracking_checkpoint_times_file.txt");
 
   // Check if the file is open
   if (!tracking_checkpoint_times_file.is_open()) {
@@ -255,8 +256,9 @@ int times_saver() {
   }
   // Write the vector data to the file
   for (const auto& val : tracking_checkpoint_times) {
-    tracking_checkpoint_times_file << setprecision(19) << val.first << setprecision(6)
-                            << "," << val.second << '\n';
+    tracking_checkpoint_times_file << setprecision(19) << val.first
+                                   << setprecision(6) << "," << val.second
+                                   << '\n';
   }
   // Close the file
   tracking_checkpoint_times_file.close();
@@ -264,20 +266,38 @@ int times_saver() {
   //////////////////////////////////////////////
 
   // Open a file in write mode
-  std::ofstream tracking_full_times_file("ms_tracking_full_times_file.txt");
+  std::ofstream tracking_stereo_times_file("ms_tracking_stereo_times_file.txt");
 
   // Check if the file is open
-  if (!tracking_full_times_file.is_open()) {
+  if (!tracking_stereo_times_file.is_open()) {
     std::cerr << "Unable to open file";
     return 1;
   }
   // Write the vector data to the file
-  for (const auto& val : tracking_full_times) {
-    tracking_full_times_file << (std::get<0>(val) ? "mono" : "stereo") << "," << setprecision(19) << std::get<1>(val) << setprecision(6)
-                            << "," << std::get<2>(val) << '\n';
+  for (const auto& val : tracking_stereo_times) {
+    tracking_stereo_times_file << setprecision(19) << val.first
+                               << setprecision(6) << "," << val.second << '\n';
   }
   // Close the file
-  tracking_full_times_file.close();
+  tracking_stereo_times_file.close();
+  // End
+  //////////////////////////////////////////////
+
+  // Open a file in write mode
+  std::ofstream tracking_mono_times_file("ms_tracking_mono_times_file.txt");
+
+  // Check if the file is open
+  if (!tracking_mono_times_file.is_open()) {
+    std::cerr << "Unable to open file";
+    return 1;
+  }
+  // Write the vector data to the file
+  for (const auto& val : tracking_mono_times) {
+    tracking_mono_times_file << setprecision(19) << val.first << setprecision(6)
+                             << "," << val.second << '\n';
+  }
+  // Close the file
+  tracking_mono_times_file.close();
   // End
   //////////////////////////////////////////////
   // Open a file in write mode
@@ -296,7 +316,7 @@ int times_saver() {
   // Close the file
   ba_exe_times_file.close();
   // End
-
+  //////////////////////////////////////////////
   // Open a file in write mode
   std::ofstream loop_closing_exe_times_file(
       "ms_loop_closing_exe_times_file.txt");
@@ -314,6 +334,7 @@ int times_saver() {
   // Close the file
   loop_closing_exe_times_file.close();
   // End
+
   std::cout << "Timing information logging finished" << std::endl;
   return 0;
 }  // End - time_saver()
@@ -689,9 +710,11 @@ int main(int argc, char** argv) {
   left_camera_exe_times.reserve(3000);
   right_camera_exe_times.reserve(3000);
   tracking_checkpoint_times.reserve(3000);
-  tracking_full_times.reserve(3000);
+  tracking_stereo_times.reserve(3000);
+  tracking_mono_times.reserve(3000);
   fusion_exe_times.reserve(3000);
   ba_exe_times.reserve(3000);
+  loop_closing_exe_times.reserve(3000);
 
   std::cout << "Hello Whale" << std::endl;
 
@@ -986,9 +1009,13 @@ void ImageGrabber::SyncWithImu() {
       time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
                    (end.tv_nsec - start.tv_nsec) / 1000000.0;
 
-      std::tuple<bool, double, double> curr_tuple =
-          std::make_tuple(fallback, tImLeft, time_spent);
-      tracking_full_times.push_back(curr_tuple);
+      std::pair<double, double> curr_pair = std::make_pair(tImLeft, time_spent);
+      if (!fallback) {
+        tracking_stereo_times.push_back(curr_pair);
+
+      } else {
+        tracking_mono_times.push_back(curr_pair);
+      }
 
       // End of Tracking
 

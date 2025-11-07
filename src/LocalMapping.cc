@@ -70,15 +70,16 @@ void LocalMapping::Run()
     mbFinished = false;
 
     while (!mbForceStop) {
-        
+      // BA Latency in ms
+      struct timespec start, end;
+      double frame_time = -1;
+      clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+
       // Tracking will see that Local Mapping is busy
       SetAcceptKeyFrames(false);
 
       // Check if there are keyframes in the queue
       if (CheckNewKeyFrames() && !mbBadImu) {
-        // BA Latency in ms
-        struct timespec start, end;
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
 #ifdef REGISTER_TIMES
             double timeLBA_ms = 0;
@@ -165,14 +166,7 @@ void LocalMapping::Run()
                     }
 
                 }
-
-                clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-                double time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
-                        (end.tv_nsec - start.tv_nsec) / 1000000.0;
-                if (!b_doneLBA) time_spent = 0;
-                std::pair<double, double> curr_pair = std::make_pair(mpCurrentKeyFrame->mTimeStamp, time_spent);
-                ba_exe_times.push_back(curr_pair);
-
+                frame_time = mpCurrentKeyFrame->mTimeStamp;
 // End of BA latency in ms
 
 #ifdef REGISTER_TIMES
@@ -285,6 +279,14 @@ void LocalMapping::Run()
             if(CheckFinish())
                 break;
         }
+
+        // End of entire local mapping loop
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        double time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
+                            (end.tv_nsec - start.tv_nsec) / 1000000.0;
+        std::pair<double, double> curr_pair =
+            std::make_pair(frame_time, time_spent);
+        ba_exe_times.push_back(curr_pair);
 
         ResetIfRequested();
 
