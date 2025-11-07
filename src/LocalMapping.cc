@@ -172,7 +172,7 @@ void LocalMapping::Run() {
                     }
 
                 }
-                frame_time = mpCurrentKeyFrame->mTimeStamp;
+                // frame_time = mpCurrentKeyFrame->mTimeStamp;
 // End of BA latency in ms
 
 #ifdef REGISTER_TIMES
@@ -295,19 +295,17 @@ void LocalMapping::Run() {
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
         double time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
                             (end.tv_nsec - start.tv_nsec) / 1000000.0;
-        // // To grasp what the period is, measure wall clock time spent
-        // clock_gettime(CLOCK_MONOTONIC, &current_time);
-        // double frame_time = (current_time.tv_sec - next_iteration_time.tv_sec) * 1000.0 +
-        //                     (current_time.tv_nsec - next_iteration_time.tv_nsec) / 1000000.0;
-        // next_iteration_time = current_time;
-        std::pair<double, double> curr_pair =
-            std::make_pair(frame_time, time_spent);
-        ba_exe_times.push_back(curr_pair);
 
         if(CheckFinish())
             break;
 
         // usleep(3000);
+        // Measure the difference between the last iteration time and current
+        // time
+        clock_gettime(CLOCK_MONOTONIC, &current_time);
+        frame_time =
+            (current_time.tv_sec - next_iteration_time.tv_sec) * 1000.0 +
+            (current_time.tv_nsec - next_iteration_time.tv_nsec) / 1000000.0;
         // Increment the next iteration time by period
         next_iteration_time.tv_nsec += period_ns;
         if (next_iteration_time.tv_nsec >= second_ns) {
@@ -326,6 +324,11 @@ void LocalMapping::Run() {
                     << std::endl;
         }
         next_iteration_time = current_time;
+
+        std::pair<double, double> curr_pair =
+            std::make_pair(frame_time, time_spent);
+        ba_exe_times.push_back(curr_pair);
+
         clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
                         NULL);
     }
