@@ -33,16 +33,6 @@
 #include <thread>
 #include <vector>
 
-#ifdef SCHED_EDF_VDSD
-#include <errno.h>
-#include <linux/sched.h>
-#include <linux/sched/types.h>
-#include <pthread.h>
-#include <sched.h>
-#include <sys/syscall.h>
-
-#endif /* SCHED_EDF_VDSD */
-
 // For saving files
 #include <fstream>
 
@@ -60,6 +50,11 @@
 // For elastic scheduling
 #include "../../../include/ElasticParameters.h"
 #include "harmonic.h"
+
+// For edf-vdsd scheduling
+#ifdef SCHED_EDF_VDSD
+#include "EDF_VDSD/edf.h"
+#endif /* SCHED_EDF_VDSD */
 
 using namespace std;
 
@@ -98,6 +93,18 @@ int imu_count = 0;
 int ba_to_skip = 1;
 int ba_count = 0;
 
+#ifdef SCHED_EDF_VDSD
+/*
+ * External counters for ROS rate threads
+ */
+bool imu_prio_index_initialized = false;
+size_t imu_prio_index = 0;
+bool left_camera_prio_index_initialized = false;
+size_t left_camera_prio_index = 0;
+bool right_camera_prio_index_initialized = false;
+size_t right_camera_prio_index = 0;
+#endif /* SCHED_EDF_VDSD */
+
 #ifdef ELASTIC_SCHED
 Harmonic_Elastic elastic_space{3};
 #endif
@@ -114,6 +121,8 @@ bool ba_period_need_update = false;
 // Max means it will never fallback
 unsigned int current_iteration = 0;
 unsigned int fallback_iteration = std::numeric_limits<unsigned int>::max();
+// Atomic flag to indicate if we are in fallback mode
+std::atomic<bool> fallback_flag{false};
 // Flag to indicate if the system has switched to monocular mode
 bool recovered = false;
 #endif /* FALLBACK_TO_MONO */
@@ -826,8 +835,20 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
   // // End Check the pthread
 
   struct timespec start, end;
-
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+
+#ifdef SCHED_EDF_VDSD
+  // Set initial priority
+  if (!left_camera_prio_index_initialized) {
+    left_camera_prio_index_initialized = true;
+    left_camera_prio_index = 0;
+    if (pthread_setschedprio(
+            pthread_self(),
+            table_0[LEFT_CAMERA_THREAD][left_camera_prio_index])) {
+      perror("pthread_setschedprio leftcamera");
+    }
+  }
+#endif /* SCHED_EDF_VDSD */
 
   mBufMutexLeft.lock();
   if (!imgLeftBuf.empty()) imgLeftBuf.pop();
@@ -843,6 +864,15 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
   std::pair<double, double> curr_pair = std::make_pair(timestamp, time_spent);
 
   left_camera_exe_times.push_back(curr_pair);
+
+#ifdef SCHED_EDF_VDSD
+  left_camera_prio_index =
+      (left_camera_prio_index + 1) % table_0[LEFT_CAMERA_THREAD].size();
+  if (pthread_setschedprio(
+          pthread_self(), table_0[LEFT_CAMERA_THREAD][left_camera_prio_index])) {
+    perror("pthread_setschedprio leftcamera");
+  }
+#endif /* SCHED_EDF_VDSD */
 }
 
 void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
@@ -856,6 +886,19 @@ void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
+#ifdef SCHED_EDF_VDSD
+  // Set initial priority
+  if (!right_camera_prio_index_initialized) {
+    right_camera_prio_index_initialized = true;
+    right_camera_prio_index = 0;
+    if (pthread_setschedprio(
+            pthread_self(),
+            table_0[RIGHT_CAMERA_THREAD][right_camera_prio_index])) {
+      perror("pthread_setschedprio rightcamera");
+    }
+  }
+#endif /* SCHED_EDF_VDSD */
+
   mBufMutexRight.lock();
   if (!imgRightBuf.empty()) imgRightBuf.pop();
   imgRightBuf.push(img_msg);
@@ -867,6 +910,16 @@ void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
   double timestamp = img_msg->header.stamp.toSec();
   std::pair<double, double> curr_pair = std::make_pair(timestamp, time_spent);
   right_camera_exe_times.push_back(curr_pair);
+  
+#ifdef SCHED_EDF_VDSD
+  right_camera_prio_index =
+      (right_camera_prio_index + 1) % table_0[RIGHT_CAMERA_THREAD].size();
+  if (pthread_setschedprio(
+          pthread_self(),
+          table_0[RIGHT_CAMERA_THREAD][right_camera_prio_index])) {
+    perror("pthread_setschedprio rightcamera");
+  }
+#endif /* SCHED_EDF_VDSD */
 }
 
 cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr& img_msg) {
@@ -896,6 +949,14 @@ void ImageGrabber::SyncWithImu() {
   const double maxTimeDiff = 0.01;
   const long long period_ns = 150000000;  // 150 ms
   const long long second_ns = 1000000000;  // 1 second
+
+#ifdef SCHED_EDF_VDSD
+  // Set initial priority
+  size_t prio_index = 0;
+  if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
+    perror("pthread_setschedprio syncwithimu");
+  }
+#endif /* SCHED_EDF_VDSD */
 
   while (1) {
     cv::Mat imLeft, imRight;
@@ -989,7 +1050,7 @@ void ImageGrabber::SyncWithImu() {
         image_count = 0;
 #ifdef FALLBACK_TO_MONO
         if (++current_iteration >= fallback_iteration) {
-          fallback = true;
+          fallback_flag.store(true);
           if (!recovered) {
             std::cout << "Falling back to monocular...";
             // Ask SLAM system to switch to monocular
@@ -1051,6 +1112,16 @@ void ImageGrabber::SyncWithImu() {
         tracking_mono_times.push_back(curr_pair);
       }
 
+      // Update priority and sleep until next iteration
+#ifdef FALLBACK_TO_MONO
+      fallback = fallback_flag.load();
+#endif /* FALLBACK_TO_MONO */
+#ifdef SCHED_EDF_VDSD
+      prio_index = (prio_index + 1) % table_0[SYNC_WITH_IMU_THREAD].size();
+      if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
+        perror("pthread_setschedprio syncwithimu");
+      }
+#endif /* SCHED_EDF_VDSD */
       clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
                       NULL);
     }
@@ -1067,8 +1138,20 @@ void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
   // res.tv_nsec);
 
   struct timespec start, end;
-
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+
+#ifdef SCHED_EDF_VDSD
+  // Set initial priority
+  if (!imu_prio_index_initialized) {
+    imu_prio_index_initialized = true;
+    imu_prio_index = 0;
+    if (pthread_setschedprio(
+            pthread_self(),
+            table_0[IMU_THREAD][imu_prio_index])) {
+      perror("pthread_setschedprio imu");
+    }
+  }
+#endif /* SCHED_EDF_VDSD */
 
   // // Check the pthread id
   // pthread_t tid = pthread_self();
@@ -1089,6 +1172,16 @@ void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
   double timestamp = imu_msg->header.stamp.toSec();
   std::pair<double, double> curr_pair = std::make_pair(timestamp, time_spent);
   imu_exe_times.push_back(curr_pair);
+
+#ifdef SCHED_EDF_VDSD
+  imu_prio_index =
+      (imu_prio_index + 1) % table_0[IMU_THREAD].size();
+  if (pthread_setschedprio(
+          pthread_self(),
+          table_0[IMU_THREAD][imu_prio_index])) {
+    perror("pthread_setschedprio imu");
+  }
+#endif /* SCHED_EDF_VDSD */
 
   // printf("Thread CPU time used: %lf nanoseconds\n", time_spent);
 

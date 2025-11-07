@@ -28,6 +28,11 @@
 #include<mutex>
 #include<thread>
 
+#define SCHED_EDF_VDSD
+
+#ifdef SCHED_EDF_VDSD
+#include "EDF_VDSD/edf.h"
+#endif /* SCHED_EDF_VDSD */
 
 namespace ORB_SLAM3
 {
@@ -95,6 +100,15 @@ void LoopClosing::Run() {
 
   // Grab the start time
   clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
+
+#ifdef SCHED_EDF_VDSD
+  // Set initial priority
+  size_t prio_index = 0;
+  if (pthread_setschedprio(pthread_self(),
+                           table_0[LOOP_CLOSING_THREAD][prio_index])) {
+    perror("pthread_setschedprio loopclosing");
+  }
+#endif /* SCHED_EDF_VDSD */
 
   while (1) {
     // NEW LOOP AND MERGE DETECTION ALGORITHM
@@ -346,6 +360,14 @@ void LoopClosing::Run() {
             std::make_pair(frame_time, time_spent);
         loop_closing_exe_times.push_back(curr_pair);
 
+        // Update priority and sleep until next iteration
+#ifdef SCHED_EDF_VDSD
+        prio_index = (prio_index + 1) % table_0[LOOP_CLOSING_THREAD].size();
+        if (pthread_setschedprio(pthread_self(),
+                                 table_0[LOOP_CLOSING_THREAD][prio_index])) {
+          perror("pthread_setschedprio loopclosing");
+        }
+#endif /* SCHED_EDF_VDSD */
         clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
                         NULL);
     }

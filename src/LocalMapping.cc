@@ -25,7 +25,13 @@
 #include "GeometricTools.h"
 
 #include<mutex>
-#include<chrono>
+#include <chrono>
+
+#define SCHED_EDF_VDSD
+
+#ifdef SCHED_EDF_VDSD
+#include "EDF_VDSD/edf.h"
+#endif /* SCHED_EDF_VDSD */
 
 using namespace std;
 
@@ -74,6 +80,14 @@ void LocalMapping::Run() {
   
   // Grab the start time
   clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
+#ifdef SCHED_EDF_VDSD
+  // Set initial priority
+  size_t prio_index = 0;
+  if (pthread_setschedprio(pthread_self(),
+                           table_0[LOCAL_MAPPING_THREAD][prio_index])) {
+    perror("pthread_setschedprio localmapping");
+  }
+#endif /* SCHED_EDF_VDSD */
 
   while (!mbForceStop) {
     // BA Latency in ms
@@ -329,6 +343,14 @@ void LocalMapping::Run() {
             std::make_pair(frame_time, time_spent);
         ba_exe_times.push_back(curr_pair);
 
+        // Update priority and sleep until next iteration
+#ifdef SCHED_EDF_VDSD
+        prio_index = (prio_index + 1) % table_0[LOCAL_MAPPING_THREAD].size();
+        if (pthread_setschedprio(pthread_self(),
+                                 table_0[LOCAL_MAPPING_THREAD][prio_index])) {
+          perror("pthread_setschedprio localmapping");
+        }
+#endif /* SCHED_EDF_VDSD */
         clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
                         NULL);
     }
