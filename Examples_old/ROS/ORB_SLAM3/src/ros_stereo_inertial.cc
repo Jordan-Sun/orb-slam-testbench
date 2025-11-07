@@ -888,10 +888,15 @@ cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr& img_msg) {
 
 void ImageGrabber::SyncWithImu() {
   struct timespec start, end;
+  struct timespec next_iteration_time, current_time;
   double time_spent;
   bool fallback = false;
+  bool initialized = false; // Creating the first map does take longer, so set start time after initialization
 
   const double maxTimeDiff = 0.01;
+  const long long period_ns = 150000000;  // 150 ms
+  const long long second_ns = 1000000000;  // 1 second
+
   while (1) {
     cv::Mat imLeft, imRight;
     double tImLeft = 0, tImRight = 0;
@@ -1009,18 +1014,56 @@ void ImageGrabber::SyncWithImu() {
       time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
                    (end.tv_nsec - start.tv_nsec) / 1000000.0;
 
-      std::pair<double, double> curr_pair = std::make_pair(tImLeft, time_spent);
+      // To grasp what the period is, measure wall clock time spent
+      clock_gettime(CLOCK_MONOTONIC, &current_time);
+      double frame_time =
+          (current_time.tv_sec - next_iteration_time.tv_sec) * 1000.0 +
+          (current_time.tv_nsec - next_iteration_time.tv_nsec) / 1000000.0;
+      next_iteration_time = current_time;
+      // std::pair<double, double> curr_pair = std::make_pair(tImLeft, time_spent);
+      std::pair<double, double> curr_pair = std::make_pair(frame_time, time_spent);
       if (!fallback) {
         tracking_stereo_times.push_back(curr_pair);
-
       } else {
         tracking_mono_times.push_back(curr_pair);
       }
 
       // End of Tracking
-
       std::chrono::milliseconds tSleep(1);
       std::this_thread::sleep_for(tSleep);
+      // if (!initialized) {
+      //   // Set the start time after initialization
+      //   clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
+      //   initialized = true;
+      // }
+      // // Increment the next iteration time by period
+      // next_iteration_time.tv_nsec += period_ns;
+      // if (next_iteration_time.tv_nsec >= second_ns) {
+      //   next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+      //   next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+      // }
+      // // If we are behind schedule, print deadline miss
+      // clock_gettime(CLOCK_MONOTONIC, &current_time);
+      // if ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+      //     (current_time.tv_sec == next_iteration_time.tv_sec &&
+      //      current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      //   std::cout << "Deadline " << next_iteration_time.tv_sec << "."
+      //             << next_iteration_time.tv_nsec
+      //             << " missed in Sync With IMU, current time "
+      //             << current_time.tv_sec << "." << current_time.tv_nsec
+      //             << std::endl;
+      // }
+      // while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+      //        (current_time.tv_sec == next_iteration_time.tv_sec &&
+      //         current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      //   next_iteration_time.tv_nsec += period_ns;
+      //   if (next_iteration_time.tv_nsec >= second_ns) {
+      //     next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+      //     next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+      //   }
+      // }
+      // clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
+      //                 NULL);
     }
   }
 }
