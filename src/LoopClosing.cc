@@ -102,11 +102,12 @@ void LoopClosing::Run() {
   clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
 
 #ifdef SCHED_EDF_VDSD
-  // Set initial priority
+  // Set initial priority and policy
+  struct sched_param sch_params;
   size_t prio_index = 0;
-  if (pthread_setschedprio(pthread_self(),
-                           table_0[LOOP_CLOSING_THREAD][prio_index])) {
-    perror("pthread_setschedprio loopclosing");
+  sch_params.sched_priority = table_0[LOOP_CLOSING_THREAD][prio_index];
+  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+    perror("pthread_setschedparam loopclosing init");
   }
 #endif /* SCHED_EDF_VDSD */
 

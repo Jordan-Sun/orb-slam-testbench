@@ -81,11 +81,12 @@ void LocalMapping::Run() {
   // Grab the start time
   clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
 #ifdef SCHED_EDF_VDSD
-  // Set initial priority
+  // Set initial priority and policy
+  struct sched_param sch_params;
   size_t prio_index = 0;
-  if (pthread_setschedprio(pthread_self(),
-                           table_0[LOCAL_MAPPING_THREAD][prio_index])) {
-    perror("pthread_setschedprio localmapping");
+  sch_params.sched_priority = table_0[LOCAL_MAPPING_THREAD][prio_index];
+  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+    perror("pthread_setschedparam localmapping init");
   }
 #endif /* SCHED_EDF_VDSD */
 

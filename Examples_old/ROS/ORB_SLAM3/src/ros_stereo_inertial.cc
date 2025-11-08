@@ -654,6 +654,18 @@ int main(int argc, char** argv) {
   // }
   // End - Set the RR scheduling
 
+#ifdef SCHED_EDF_VDSD
+  // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
+  // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
+  // Start all threads with the lowest SCHED_FIFO priority.
+  struct sched_param sch_params;
+  sch_params.sched_priority = 1;
+  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+    perror("pthread_setschedparam failed");
+    return 1;
+  }
+#endif /* SCHED_EDF_VDSD */
+
 #ifdef RESTRICT_BANDWIDTH
   // Set the CGROUP
   // Step 1: Create a cgroup
@@ -779,18 +791,6 @@ int main(int argc, char** argv) {
   // &ImageGrabber::GrabImageLeft,&igb); ros::Subscriber sub_img_right =
   // n.subscribe("/camera/right/image_raw", 100,
   // &ImageGrabber::GrabImageRight,&igb);
-
-#ifdef SCHED_EDF_VDSD
-  // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
-  // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
-  // Start all threads with the lowest SCHED_FIFO priority.
-  struct sched_param sch_params;
-  sch_params.sched_priority = 1;
-  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
-    perror("pthread_setschedparam failed");
-    return 1;
-  }
-#endif /* SCHED_EDF_VDSD */
 
   std::thread sync_thread(&ImageGrabber::SyncWithImu, &igb);
 
