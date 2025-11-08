@@ -20,7 +20,7 @@
  */
 
 #define FALLBACK_TO_MONO
-// #define SCHED_EDF_VDSD
+#define SCHED_EDF_VDSD
 
 #include <unistd.h>
 
