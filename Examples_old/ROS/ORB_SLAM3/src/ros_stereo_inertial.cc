@@ -657,9 +657,8 @@ int main(int argc, char** argv) {
 #ifdef SCHED_EDF_VDSD
   // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
   // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
-  // Start all threads with the lowest SCHED_FIFO priority.
   struct sched_param sch_params;
-  sch_params.sched_priority = 1;
+  sch_params.sched_priority = 99;
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam failed");
     return 1;
