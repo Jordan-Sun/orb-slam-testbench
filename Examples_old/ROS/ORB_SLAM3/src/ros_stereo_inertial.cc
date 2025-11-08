@@ -658,7 +658,7 @@ int main(int argc, char** argv) {
   // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
   // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
   struct sched_param sch_params;
-  sch_params.sched_priority = 1;
+  sch_params.sched_priority = 99;
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam failed");
     return 1;
@@ -807,12 +807,12 @@ int main(int argc, char** argv) {
   spinner.start();
   ros::waitForShutdown();
 
-#ifdef SCHED_EDF_VDSD
-  // Prioritize the main thread when shutting down
-  if (pthread_setschedprio(pthread_self(), 99)) {
-    perror("pthread_setschedprio end main");
-  }
-#endif /* SCHED_EDF_VDSD */
+// #ifdef SCHED_EDF_VDSD
+//   // Prioritize the main thread when shutting down
+//   if (pthread_setschedprio(pthread_self(), 99)) {
+//     perror("pthread_setschedprio end main");
+//   }
+// #endif /* SCHED_EDF_VDSD */
 
   // ros::spin();
   cout << "I am saving the trajectories and execution times" << endl;
