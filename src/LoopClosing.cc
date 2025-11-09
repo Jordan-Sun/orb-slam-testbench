@@ -2337,6 +2337,13 @@ void LoopClosing::RunGlobalBundleAdjustment(Map* pActiveMap, unsigned long nLoop
 {  
     Verbose::PrintMess("Starting Global Bundle Adjustment", Verbose::VERBOSITY_NORMAL);
 
+#ifdef SCHED_EDF_VDSD
+    // Set the priority of this thread to the lowest as this is a none real-time background process
+    if (pthread_setschedprio(pthread_self(), 1)) {
+      perror("pthread_setschedprio loopclosing");
+    }
+#endif /* SCHED_EDF_VDSD */
+
 #ifdef REGISTER_TIMES
     std::chrono::steady_clock::time_point time_StartFGBA = std::chrono::steady_clock::now();
 
