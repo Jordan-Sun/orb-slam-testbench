@@ -630,6 +630,17 @@ void update_cpu_utilization() {
 }
 
 int main(int argc, char** argv) {
+#ifdef SCHED_EDF_VDSD
+  // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
+  // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
+  struct sched_param sch_params;
+  sch_params.sched_priority = 99;
+  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+    perror("pthread_setschedparam failed");
+    return 1;
+  }
+#endif /* SCHED_EDF_VDSD */
+
   ros::init(argc, argv, "Stereo_Inertial");
   ros::NodeHandle n("~");
   ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME,
@@ -653,17 +664,6 @@ int main(int argc, char** argv) {
   //     return 1;
   // }
   // End - Set the RR scheduling
-
-#ifdef SCHED_EDF_VDSD
-  // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
-  // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
-  struct sched_param sch_params;
-  sch_params.sched_priority = 99;
-  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
-    perror("pthread_setschedparam failed");
-    return 1;
-  }
-#endif /* SCHED_EDF_VDSD */
 
 #ifdef RESTRICT_BANDWIDTH
   // Set the CGROUP
