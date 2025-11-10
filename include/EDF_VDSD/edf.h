@@ -13,11 +13,16 @@ enum TaskID {
 //   IMU_THREAD,
 //   LEFT_CAMERA_THREAD,
 //   RIGHT_CAMERA_THREAD
-  DUMMY_THREAD
+//   DUMMY_THREAD
 };
 
 // Multiple reader with no writer so we should be thread safe
 const std::vector<std::vector<int>> table_0 = {
+    {
+        94,
+        88,
+        82,
+    },
     {
         99,
         98,
@@ -31,18 +36,15 @@ const std::vector<std::vector<int>> table_0 = {
         90,
         89,
         88,
+        87,
+        86,
+        85,
+        84,
+        83,
+        82,
     },
     {
-        88,
-    },
-    {
-        94,
-        88,
-    },
-    {
-        96,
-        92,
-        88,
+        82,
     },
 };
 // Each thread should keep its own indexing to avoid race conditions
