@@ -852,10 +852,7 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
   // Set initial priority
   if (!left_camera_prio_index_initialized) {
     left_camera_prio_index_initialized = true;
-    left_camera_prio_index = 0;
-    if (pthread_setschedprio(
-            pthread_self(),
-            table_0[LEFT_CAMERA_THREAD][left_camera_prio_index])) {
+    if (pthread_setschedprio(pthread_self(), 99)) {
       perror("pthread_setschedprio leftcamera");
     }
   }
@@ -875,15 +872,6 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
   std::pair<double, double> curr_pair = std::make_pair(timestamp, time_spent);
 
   left_camera_exe_times.push_back(curr_pair);
-
-#ifdef SCHED_EDF_VDSD
-  left_camera_prio_index =
-      (left_camera_prio_index + 1) % table_0[LEFT_CAMERA_THREAD].size();
-  if (pthread_setschedprio(
-          pthread_self(), table_0[LEFT_CAMERA_THREAD][left_camera_prio_index])) {
-    perror("pthread_setschedprio leftcamera");
-  }
-#endif /* SCHED_EDF_VDSD */
 }
 
 void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
@@ -901,10 +889,7 @@ void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
   // Set initial priority
   if (!right_camera_prio_index_initialized) {
     right_camera_prio_index_initialized = true;
-    right_camera_prio_index = 0;
-    if (pthread_setschedprio(
-            pthread_self(),
-            table_0[RIGHT_CAMERA_THREAD][right_camera_prio_index])) {
+    if (pthread_setschedprio(pthread_self(), 99)) {
       perror("pthread_setschedprio rightcamera");
     }
   }
@@ -921,16 +906,6 @@ void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
   double timestamp = img_msg->header.stamp.toSec();
   std::pair<double, double> curr_pair = std::make_pair(timestamp, time_spent);
   right_camera_exe_times.push_back(curr_pair);
-  
-#ifdef SCHED_EDF_VDSD
-  right_camera_prio_index =
-      (right_camera_prio_index + 1) % table_0[RIGHT_CAMERA_THREAD].size();
-  if (pthread_setschedprio(
-          pthread_self(),
-          table_0[RIGHT_CAMERA_THREAD][right_camera_prio_index])) {
-    perror("pthread_setschedprio rightcamera");
-  }
-#endif /* SCHED_EDF_VDSD */
 }
 
 cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr& img_msg) {
@@ -1155,10 +1130,7 @@ void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
   // Set initial priority
   if (!imu_prio_index_initialized) {
     imu_prio_index_initialized = true;
-    imu_prio_index = 0;
-    if (pthread_setschedprio(
-            pthread_self(),
-            table_0[IMU_THREAD][imu_prio_index])) {
+    if (pthread_setschedprio(pthread_self(), 99)) {
       perror("pthread_setschedprio imu");
     }
   }
@@ -1183,16 +1155,6 @@ void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
   double timestamp = imu_msg->header.stamp.toSec();
   std::pair<double, double> curr_pair = std::make_pair(timestamp, time_spent);
   imu_exe_times.push_back(curr_pair);
-
-#ifdef SCHED_EDF_VDSD
-  imu_prio_index =
-      (imu_prio_index + 1) % table_0[IMU_THREAD].size();
-  if (pthread_setschedprio(
-          pthread_self(),
-          table_0[IMU_THREAD][imu_prio_index])) {
-    perror("pthread_setschedprio imu");
-  }
-#endif /* SCHED_EDF_VDSD */
 
   // printf("Thread CPU time used: %lf nanoseconds\n", time_spent);
 
