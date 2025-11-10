@@ -620,6 +620,54 @@ void update_cpu_utilization() {
   }
 }
 
+void dummy() {
+  struct timespec next_iteration_time, current_time;
+  struct timespec start, end;
+  const long long period_ns =    600000000; // 600 ms
+  const long long dummy_work_ns = 89000000; // 90 ms, but leave 1 ms for other operations
+  const long long second_ns =   1000000000; // 1 second
+
+  // Set the start time after initialization
+  clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
+
+  // Infinite loop for periodic execution
+  while (1) {
+    // Use CPU thread time for work time
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+    while (1) {
+      // Work dummy workload until the required time has passed
+      clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+      long long elapsed_ns = (end.tv_sec - start.tv_sec) * 1000000000LL +
+                             (end.tv_nsec - start.tv_nsec);
+      if (elapsed_ns >= dummy_work_ns) {
+        break;
+      }
+    }
+
+    // Increment the next iteration time by period
+    next_iteration_time.tv_nsec += period_ns;
+    if (next_iteration_time.tv_nsec >= second_ns) {
+      next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+      next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+    }
+    // If we are behind schedule, print deadline miss and increment once to
+    // catch up
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    if ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+        (current_time.tv_sec == next_iteration_time.tv_sec &&
+         current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      std::cout << "Deadline " << next_iteration_time.tv_sec << "."
+                << next_iteration_time.tv_nsec
+                << " missed in Dummy, current time "
+                << current_time.tv_sec << "." << current_time.tv_nsec
+                << std::endl;
+    }
+    next_iteration_time = current_time;
+
+    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
+  }
+}
+
 int main(int argc, char** argv) {
   ros::init(argc, argv, "Stereo_Inertial");
   ros::NodeHandle n("~");
@@ -790,6 +838,7 @@ int main(int argc, char** argv) {
                                     &igb);
   std::thread left_img_grab_thread(&ImageGrabber::left_image_thread_function,
                                    &igb);
+  std::thread dummy_thread(&dummy);
 
 #ifdef RESTRICT_BANDWIDTH
   std::thread t(update_cpu_utilization);
