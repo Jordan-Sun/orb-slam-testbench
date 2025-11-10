@@ -896,6 +896,7 @@ void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
             table_0[RIGHT_CAMERA_THREAD][right_camera_prio_index])) {
       perror("pthread_setschedprio rightcamera");
     }
+  }
 #endif /* SCHED_EDF_VDSD */
 
   mBufMutexRight.lock();
@@ -1150,6 +1151,7 @@ void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
                              table_0[IMU_THREAD][imu_prio_index])) {
       perror("pthread_setschedprio imu");
     }
+  }
 #endif /* SCHED_EDF_VDSD */
 
   // // Check the pthread id
