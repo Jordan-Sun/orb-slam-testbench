@@ -328,7 +328,6 @@ void LocalMapping::Run() {
           next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
         }
         // If we are behind schedule, print deadline miss and increment once to catch up
-        clock_gettime(CLOCK_MONOTONIC, &current_time);
         if ((current_time.tv_sec > next_iteration_time.tv_sec) ||
             (current_time.tv_sec == next_iteration_time.tv_sec &&
              current_time.tv_nsec > next_iteration_time.tv_nsec)) {
