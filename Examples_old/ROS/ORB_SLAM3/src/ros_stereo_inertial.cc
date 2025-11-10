@@ -803,8 +803,8 @@ int main(int argc, char** argv) {
   std::thread t(update_cpu_utilization);
 #endif
 
-  ros::AsyncSpinner spinner(4);  // Use 4 threads
-  spinner.start();
+  // ros::AsyncSpinner spinner(4);  // Use 4 threads
+  // spinner.start();
 #ifdef SCHED_EDF_VDSD
   // Main thread is idling now so set to low priority
   if (pthread_setschedprio(pthread_self(), 1)) {
