@@ -836,19 +836,6 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
-#ifdef SCHED_EDF_VDSD
-  // Set initial priority
-  if (!left_camera_prio_index_initialized) {
-    left_camera_prio_index_initialized = true;
-    left_camera_prio_index = 0;
-    if (pthread_setschedprio(
-            pthread_self(),
-            table_0[LEFT_CAMERA_THREAD][left_camera_prio_index])) {
-      perror("pthread_setschedprio leftcamera");
-    }
-  }
-#endif /* SCHED_EDF_VDSD */
-
   mBufMutexLeft.lock();
   if (!imgLeftBuf.empty()) imgLeftBuf.pop();
   imgLeftBuf.push(img_msg);
@@ -863,16 +850,6 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
   std::pair<double, double> curr_pair = std::make_pair(timestamp, time_spent);
 
   left_camera_exe_times.push_back(curr_pair);
-
-#ifdef SCHED_EDF_VDSD
-  left_camera_prio_index =
-      (left_camera_prio_index + 1) % table_0[LEFT_CAMERA_THREAD].size();
-  if (pthread_setschedprio(
-          pthread_self(),
-          table_0[LEFT_CAMERA_THREAD][left_camera_prio_index])) {
-    perror("pthread_setschedprio leftcamera");
-  }
-#endif /* SCHED_EDF_VDSD */
 }
 
 void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
@@ -886,19 +863,6 @@ void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
-#ifdef SCHED_EDF_VDSD
-  // Set initial priority
-  if (!right_camera_prio_index_initialized) {
-    right_camera_prio_index_initialized = true;
-    right_camera_prio_index = 0;
-    if (pthread_setschedprio(
-            pthread_self(),
-            table_0[RIGHT_CAMERA_THREAD][right_camera_prio_index])) {
-      perror("pthread_setschedprio rightcamera");
-    }
-  }
-#endif /* SCHED_EDF_VDSD */
-
   mBufMutexRight.lock();
   if (!imgRightBuf.empty()) imgRightBuf.pop();
   imgRightBuf.push(img_msg);
@@ -910,47 +874,37 @@ void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
   double timestamp = img_msg->header.stamp.toSec();
   std::pair<double, double> curr_pair = std::make_pair(timestamp, time_spent);
   right_camera_exe_times.push_back(curr_pair);
+}
 
-#ifdef SCHED_EDF_VDSD
-  right_camera_prio_index =
-      (right_camera_prio_index + 1) % table_0[RIGHT_CAMERA_THREAD].size();
-  if (pthread_setschedprio(
-          pthread_self(),
-          table_0[RIGHT_CAMERA_THREAD][right_camera_prio_index])) {
-    perror("pthread_setschedprio rightcamera");
-  }
-#endif /* SCHED_EDF_VDSD */
-  }
-
-  cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr& img_msg) {
-    // Copy the ros image message to cv::Mat.
-    cv_bridge::CvImageConstPtr cv_ptr;
-    try {
-      cv_ptr =
-          cv_bridge::toCvShare(img_msg, sensor_msgs::image_encodings::MONO8);
-    } catch (cv_bridge::Exception& e) {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-    }
-
-    if (cv_ptr->image.type() == 0) {
-      return cv_ptr->image.clone();
-    } else {
-      std::cout << "Error type" << std::endl;
-      return cv_ptr->image.clone();
-    }
+cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr& img_msg) {
+  // Copy the ros image message to cv::Mat.
+  cv_bridge::CvImageConstPtr cv_ptr;
+  try {
+    cv_ptr =
+        cv_bridge::toCvShare(img_msg, sensor_msgs::image_encodings::MONO8);
+  } catch (cv_bridge::Exception& e) {
+    ROS_ERROR("cv_bridge exception: %s", e.what());
   }
 
-  void ImageGrabber::SyncWithImu() {
-    struct timespec start, end;
-    struct timespec next_iteration_time, current_time;
-    double time_spent;
-    bool fallback = false;
-    bool initialized = false;  // Creating the first map does take longer, so
-                               // set start time after initialization
+  if (cv_ptr->image.type() == 0) {
+    return cv_ptr->image.clone();
+  } else {
+    std::cout << "Error type" << std::endl;
+    return cv_ptr->image.clone();
+  }
+}
 
-    const double maxTimeDiff = 0.01;
-    const long long period_ns = 300000000;   // 300 ms
-    const long long second_ns = 1000000000;  // 1 second
+void ImageGrabber::SyncWithImu() {
+  struct timespec start, end;
+  struct timespec next_iteration_time, current_time;
+  double time_spent;
+  bool fallback = false;
+  bool initialized = false;  // Creating the first map does take longer, so
+                              // set start time after initialization
+
+  const double maxTimeDiff = 0.01;
+  const long long period_ns = 300000000;   // 300 ms
+  const long long second_ns = 1000000000;  // 1 second
 
 #ifdef SCHED_EDF_VDSD
   // Set initial priority
@@ -1142,18 +1096,6 @@ void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
-#ifdef SCHED_EDF_VDSD
-  // Set initial priority
-  if (!imu_prio_index_initialized) {
-    imu_prio_index_initialized = true;
-    imu_prio_index = 0;
-    if (pthread_setschedprio(pthread_self(),
-                             table_0[IMU_THREAD][imu_prio_index])) {
-      perror("pthread_setschedprio imu");
-    }
-  }
-#endif /* SCHED_EDF_VDSD */
-
   // // Check the pthread id
   // pthread_t tid = pthread_self();
   // printf("IMU Thread ID: %lu\n", (unsigned long)tid);
@@ -1173,14 +1115,6 @@ void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
   double timestamp = imu_msg->header.stamp.toSec();
   std::pair<double, double> curr_pair = std::make_pair(timestamp, time_spent);
   imu_exe_times.push_back(curr_pair);
-
-#ifdef SCHED_EDF_VDSD
-  imu_prio_index = (imu_prio_index + 1) % table_0[IMU_THREAD].size();
-  if (pthread_setschedprio(pthread_self(),
-                           table_0[IMU_THREAD][imu_prio_index])) {
-    perror("pthread_setschedprio imu");
-  }
-#endif /* SCHED_EDF_VDSD */
 
   // printf("Thread CPU time used: %lf nanoseconds\n", time_spent);
 
