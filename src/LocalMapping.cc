@@ -67,7 +67,7 @@ void LocalMapping::SetTracker(Tracking *pTracker)
 
 void LocalMapping::Run() {
   struct timespec next_iteration_time, current_time;
-  const long long period_ns = 900000000;   // 900 ms
+  const long long period_ns = 75000000;  // 75 ms
   const long long second_ns = 1000000000;  // 1 second
 
   mbFinished = false;
