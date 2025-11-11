@@ -25,9 +25,7 @@ const std::vector<std::vector<int>> table_0 = {
     },
     {
         99,
-        98,
         97,
-        96,
         95,
         94,
     },
