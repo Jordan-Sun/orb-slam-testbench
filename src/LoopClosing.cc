@@ -352,7 +352,12 @@ void LoopClosing::Run() {
                     << " missed in Loop Closing, current time "
                     << current_time.tv_sec << "." << current_time.tv_nsec
                     << std::endl;
+        } else {
+          std::cout << "Loop Closing thread completed at "
+                    << current_time.tv_sec << "." << current_time.tv_nsec
+                    << std::endl;
         }
+
         while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
                (current_time.tv_sec == next_iteration_time.tv_sec &&
                 current_time.tv_nsec > next_iteration_time.tv_nsec)) {
