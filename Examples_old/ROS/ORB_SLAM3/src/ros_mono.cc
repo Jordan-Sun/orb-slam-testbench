@@ -38,6 +38,7 @@ vector<std::pair<double, double>> right_camera_exe_times;
 vector<std::pair<double, double>> tracking_exe_times;
 vector<std::pair<double, double>> ba_exe_times;
 vector<std::pair<double, double>> loop_closing_exe_times;
+struct timespec release_time;
 
 bool imu_period_need_update = false;
 bool image_period_need_update = false;

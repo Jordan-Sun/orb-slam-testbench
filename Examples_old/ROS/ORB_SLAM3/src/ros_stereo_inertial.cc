@@ -80,6 +80,7 @@ vector<std::pair<double, double>> tracking_mono_times;
 vector<std::pair<double, double>> ba_exe_times;
 vector<std::pair<double, double>> fusion_exe_times;
 vector<std::pair<double, double>> loop_closing_exe_times;
+struct timespec release_time;
 
 /*
  * Skip factors to control the periods
