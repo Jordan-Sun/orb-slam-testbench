@@ -106,6 +106,14 @@ void LoopClosing::Run() {
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam loopclosing init");
   }
+  // Migrate to CPU 3
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  CPU_SET(3, &cpuset);
+  if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
+    perror("pthread_setaffinity_np failed");
+    return 1;
+  }
   next_iteration_time = release_time;
   clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
 #endif /* SCHED_EDF_VDSD */
