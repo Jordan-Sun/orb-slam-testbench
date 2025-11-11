@@ -22,8 +22,6 @@ const std::vector<std::vector<int>> table_0 = {
         98,
         96,
         94,
-        92,
-        90,
     },
     {
         99,
@@ -32,14 +30,9 @@ const std::vector<std::vector<int>> table_0 = {
         96,
         95,
         94,
-        93,
-        92,
-        91,
-        90,
     },
     {
-        95,
-        90,
+        94,
     },
 };
 // Each thread should keep its own indexing to avoid race conditions
