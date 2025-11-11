@@ -35,8 +35,10 @@
 
 using namespace std;
 
-namespace ORB_SLAM3
-{
+namespace ORB_SLAM3 {
+
+// Declare priority index outside local mapping because we will recreate it upon mode switch
+size_t lm_prio_index = 0;
 
 LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, bool bInertial, const string &_strSeqName):
     mpSystem(pSys), mbMonocular(bMonocular), mbInertial(bInertial), mbResetRequested(false), mbResetRequestedActiveMap(false), mbFinishRequested(false), mbFinished(true), mpAtlas(pAtlas), bInitializing(false),
@@ -83,8 +85,7 @@ void LocalMapping::Run() {
 #ifdef SCHED_EDF_VDSD
   // Set initial priority and policy
   struct sched_param sch_params;
-  size_t prio_index = 0;
-  sch_params.sched_priority = table_0[LOCAL_MAPPING_THREAD][prio_index];
+  sch_params.sched_priority = table_0[LOCAL_MAPPING_THREAD][lm_prio_index];
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam localmapping init");
   }
@@ -337,7 +338,17 @@ void LocalMapping::Run() {
                     << current_time.tv_sec << "." << current_time.tv_nsec
                     << std::endl;
         }
-        next_iteration_time = current_time;
+        while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+               (current_time.tv_sec == next_iteration_time.tv_sec &&
+                current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+          next_iteration_time.tv_nsec += period_ns;
+          next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+          next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+#ifdef SCHED_EDF_VDSD
+          // Make sure the priority index is updated accordingly each skip
+          lm_prio_index = lm_prio_index + 1;
+#endif /* SCHED_EDF_VDSD */
+        }
 
         std::pair<double, double> curr_pair =
             std::make_pair(frame_time, time_spent);
@@ -345,9 +356,9 @@ void LocalMapping::Run() {
 
         // Update priority and sleep until next iteration
 #ifdef SCHED_EDF_VDSD
-        prio_index = (prio_index + 1) % table_0[LOCAL_MAPPING_THREAD].size();
-        if (pthread_setschedprio(pthread_self(),
-                                 table_0[LOCAL_MAPPING_THREAD][prio_index])) {
+        lm_prio_index = (lm_prio_index + 1) % table_0[LOCAL_MAPPING_THREAD].size();
+        if (pthread_setschedprio(
+                pthread_self(), table_0[LOCAL_MAPPING_THREAD][lm_prio_index])) {
           perror("pthread_setschedprio localmapping");
         }
 #endif /* SCHED_EDF_VDSD */
@@ -1596,4 +1607,4 @@ KeyFrame* LocalMapping::GetCurrKF()
     return mpCurrentKeyFrame;
 }
 
-} //namespace ORB_SLAM
+}  // namespace ORB_SLAM3

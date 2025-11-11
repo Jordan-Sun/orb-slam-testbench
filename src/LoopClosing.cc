@@ -354,7 +354,17 @@ void LoopClosing::Run() {
                     << current_time.tv_sec << "." << current_time.tv_nsec
                     << std::endl;
         }
-        next_iteration_time = current_time;
+        while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+               (current_time.tv_sec == next_iteration_time.tv_sec &&
+                current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+          next_iteration_time.tv_nsec += period_ns;
+          next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+          next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+#ifdef SCHED_EDF_VDSD
+          // Make sure the priority index is updated accordingly each skip
+          prio_index = prio_index + 1;
+#endif /* SCHED_EDF_VDSD */
+        }
 
         std::pair<double, double> curr_pair =
             std::make_pair(frame_time, time_spent);
