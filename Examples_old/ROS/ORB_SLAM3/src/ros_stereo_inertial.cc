@@ -722,9 +722,9 @@ int main(int argc, char** argv) {
             << fallback_iteration << std::endl;
 #endif /* FALLBACK_TO_MONO */
 #ifdef SCHED_EDF_VDSD
-  // Sync all threads to release at the same time 10 seconds later
+  // Sync all threads to release at the same time 30 s later
   clock_gettime(CLOCK_MONOTONIC, &release_time);
-  release_time.tv_sec += 10;
+  release_time.tv_sec += 30;
 #endif /* SCHED_EDF_VDSD */
 
   // Create SLAM system. It initializes all system threads and gets ready to
