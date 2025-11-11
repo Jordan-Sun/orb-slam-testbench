@@ -20,18 +20,26 @@ enum TaskID {
 const std::vector<std::vector<int>> table_0 = {
     {
         98,
-        95,
-        93,
+        96,
+        94,
+        92,
+        90,
     },
     {
         99,
+        98,
         97,
         96,
+        95,
         94,
         93,
+        92,
+        91,
+        90,
     },
     {
-        93,
+        95,
+        90,
     },
 };
 // Each thread should keep its own indexing to avoid race conditions
