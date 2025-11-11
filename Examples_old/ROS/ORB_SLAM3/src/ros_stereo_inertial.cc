@@ -931,7 +931,6 @@ void ImageGrabber::SyncWithImu() {
   CPU_SET(5, &cpuset);
   if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
     perror("pthread_setaffinity_np failed");
-    return 1;
   }
   // Set the start time after initialization
   next_iteration_time = release_time;

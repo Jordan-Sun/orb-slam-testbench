@@ -93,7 +93,6 @@ void LocalMapping::Run() {
   CPU_SET(4, &cpuset);
   if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
     perror("pthread_setaffinity_np failed");
-    return 1;
   }
   next_iteration_time = release_time;
     clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
