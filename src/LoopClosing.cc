@@ -98,9 +98,6 @@ void LoopClosing::Run() {
 
   mbFinished = false;
 
-  // Grab the start time
-  clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
-
 #ifdef SCHED_EDF_VDSD
   // Set initial priority and policy
   struct sched_param sch_params;
@@ -109,6 +106,8 @@ void LoopClosing::Run() {
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam loopclosing init");
   }
+  next_iteration_time = release_time;
+  clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
 #endif /* SCHED_EDF_VDSD */
 
   while (1) {

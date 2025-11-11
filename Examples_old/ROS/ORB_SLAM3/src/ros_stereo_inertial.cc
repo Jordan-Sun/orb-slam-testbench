@@ -720,6 +720,11 @@ int main(int argc, char** argv) {
   std::cout << "The system will fallback to monocular at iteration: "
             << fallback_iteration << std::endl;
 #endif /* FALLBACK_TO_MONO */
+#ifdef SCHED_EDF_VDSD
+  // Sync all threads to release at the same time 10 seconds later
+  clock_gettime(CLOCK_MONOTONIC, &release_time);
+  release_time.tv_sec += 10;
+#endif /* SCHED_EDF_VDSD */
 
   // Create SLAM system. It initializes all system threads and gets ready to
   // process frames.
@@ -1034,7 +1039,7 @@ void ImageGrabber::SyncWithImu() {
       // End of Tracking
       if (!initialized) {
         // Set the start time after initialization
-        clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
+        next_iteration_time = release_time;
         initialized = true;
       }
       // Measure the difference between the last iteration time and current time

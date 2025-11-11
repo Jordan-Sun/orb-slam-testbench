@@ -16,6 +16,9 @@ enum TaskID {
 //   DUMMY_THREAD
 };
 
+// Ensure all tasks start at the same time for the table to be synchronized
+struct timespec release_time;
+
 // Multiple reader with no writer so we should be thread safe
 const std::vector<std::vector<int>> table_0 = {
     {
