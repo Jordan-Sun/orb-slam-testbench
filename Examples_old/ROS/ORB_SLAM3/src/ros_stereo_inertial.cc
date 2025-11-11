@@ -905,8 +905,8 @@ void ImageGrabber::SyncWithImu() {
   struct timespec next_iteration_time, current_time;
   double time_spent;
   bool fallback = false;
-  bool initialized = false;  // Creating the first map does take longer, so
-                              // set start time after initialization
+  // bool initialized = false;  // Creating the first map does take longer, so
+  //                             // set start time after initialization
 
   const double maxTimeDiff = 0.01;
   const long long period_ns = 300000000;   // 300 ms
@@ -918,6 +918,9 @@ void ImageGrabber::SyncWithImu() {
   if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
     perror("pthread_setschedprio syncwithimu");
   }
+  // Set the start time after initialization
+  next_iteration_time = release_time;
+  clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
 #endif /* SCHED_EDF_VDSD */
 
   while (1) {
@@ -1038,11 +1041,6 @@ void ImageGrabber::SyncWithImu() {
                    (end.tv_nsec - start.tv_nsec) / 1000000.0;
 
       // End of Tracking
-      if (!initialized) {
-        // Set the start time after initialization
-        next_iteration_time = release_time;
-        initialized = true;
-      }
       // Measure the difference between the last iteration time and current time
       clock_gettime(CLOCK_MONOTONIC, &current_time);
       double frame_time =
