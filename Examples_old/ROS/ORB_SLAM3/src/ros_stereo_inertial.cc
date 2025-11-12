@@ -916,7 +916,7 @@ void ImageGrabber::SyncWithImu() {
   //                             // set start time after initialization
 
   const double maxTimeDiff = 0.01;
-  const long long period_ns = 300000000;   // 300 ms
+  const long long period_ns = 600000000;   // 600 ms
   const long long second_ns = 1000000000;  // 1 second
 
 #ifdef SCHED_EDF_VDSD
