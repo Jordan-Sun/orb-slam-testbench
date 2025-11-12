@@ -101,6 +101,10 @@ void LoopClosing::Run() {
     //----------------------------
     struct timespec start, end;
     double frame_time = -1;
+
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    std::cout << "Loop Closing thread started at " << current_time.tv_sec
+              << "." << current_time.tv_nsec << std::endl;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
     if (CheckNewKeyFrames()) {
@@ -339,6 +343,9 @@ void LoopClosing::Run() {
                     << " missed in Loop Closing, current time "
                     << current_time.tv_sec << "." << current_time.tv_nsec
                     << std::endl;
+        } else {
+          std::cout << "Sync With IMU completed at " << current_time.tv_sec
+                    << "." << current_time.tv_nsec << std::endl;
         }
         next_iteration_time = current_time;
 

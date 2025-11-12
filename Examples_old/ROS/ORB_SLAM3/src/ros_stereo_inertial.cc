@@ -951,6 +951,9 @@ void ImageGrabber::SyncWithImu() {
     double tImLeft = 0, tImRight = 0;
 
     // Time to checkpoint
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    std::cout << "Sync With IMU thread started at " << current_time.tv_sec
+              << "." << current_time.tv_nsec << std::endl;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
     // Upon fallback, ignore the right image buffer
@@ -1089,7 +1092,11 @@ void ImageGrabber::SyncWithImu() {
                   << " missed in Sync With IMU, current time "
                   << current_time.tv_sec << "." << current_time.tv_nsec
                   << std::endl;
+      } else {
+        std::cout << "Sync With IMU completed at " << current_time.tv_sec << "."
+                  << current_time.tv_nsec << std::endl;
       }
+
       next_iteration_time = current_time;
 
       // Push back the time spent and frame time

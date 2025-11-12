@@ -79,6 +79,9 @@ void LocalMapping::Run() {
     // BA Latency in ms
     struct timespec start, end;
     double frame_time = -1;
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    std::cout << "Local Mapping thread started at " << current_time.tv_sec
+              << "." << current_time.tv_nsec << std::endl;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
     // Tracking will see that Local Mapping is busy
@@ -322,6 +325,9 @@ void LocalMapping::Run() {
                     << " missed in Local Mapping, current time "
                     << current_time.tv_sec << "." << current_time.tv_nsec
                     << std::endl;
+        } else {
+          std::cout << "Local Mapping completed at " << current_time.tv_sec
+                    << "." << current_time.tv_nsec << std::endl;
         }
         next_iteration_time = current_time;
 
