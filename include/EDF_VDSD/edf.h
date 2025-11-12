@@ -22,6 +22,14 @@ extern struct timespec release_time;
 // Multiple reader with no writer so we should be thread safe
 const std::vector<std::vector<int>> table_0 = {
     {
+        98,
+        96,
+        94,
+        92,
+        90,
+        88,
+    },
+    {
         99,
         98,
         97,
@@ -36,10 +44,12 @@ const std::vector<std::vector<int>> table_0 = {
         88,
     },
     {
+        94,
         88,
     },
     {
-        94,
+        96,
+        92,
         88,
     },
 };
