@@ -968,8 +968,7 @@ void ImageGrabber::SyncWithImu() {
 
         if ((tImLeft - tImRight) > maxTimeDiff ||
             (tImRight - tImLeft) > maxTimeDiff) {
-          std::cout << "Stereo Image sync fail: " << tImLeft - tImRight << "."
-                    << std::endl;
+          usleep(500);
           continue;
         }
       }
@@ -977,9 +976,6 @@ void ImageGrabber::SyncWithImu() {
       tImu = mpImuGb->imuBuf.front()->header.stamp.toSec();
       if (tImLeft > tImu)
       {
-        std::cout << "IMU Image sync fail: " << tImLeft - tImu << "."
-                  << std::endl;
-        // Wait for imu to arrive
         usleep(500);
         continue;
       }
