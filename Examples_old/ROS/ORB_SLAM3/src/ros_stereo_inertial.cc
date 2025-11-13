@@ -902,7 +902,7 @@ int main(int argc, char** argv) {
 
   // ros::AsyncSpinner spinner(4);  // Use 4 threads
   // spinner.start();
-  ros::spin();
+  // ros::spin();
   ros::waitForShutdown();
 
   cout << "I am saving the trajectories and execution times" << endl;
@@ -1052,6 +1052,9 @@ void ImageGrabber::SyncWithImu() {
 
         if ((tImLeft - tImRight) > maxTimeDiff ||
             (tImRight - tImLeft) > maxTimeDiff) {
+          std::cout << "Time misalignment between left and right images: "
+                    << std::fixed << std::setprecision(6) << tImLeft - tImRight
+                    << " s" << std::endl;
           usleep(500);
           continue;
         }
@@ -1060,6 +1063,9 @@ void ImageGrabber::SyncWithImu() {
       tImu = mpImuGb->imuBuf.front()->header.stamp.toSec();
       if (tImLeft > tImu)
       {
+        std::cout << "Time misalignment between IMU and images: "
+                  << std::fixed << std::setprecision(6) << tImLeft - tImu
+                  << " s" << std::endl;
         usleep(500);
         continue;
       }
