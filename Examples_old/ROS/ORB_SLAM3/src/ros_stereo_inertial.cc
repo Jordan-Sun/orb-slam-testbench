@@ -881,11 +881,11 @@ int main(int argc, char** argv) {
 
   std::thread sync_thread(&ImageGrabber::SyncWithImu, &igb);
 
-  std::thread imu_grab_thread(&ImuGrabber::imu_thread_function, &imugb);
-  std::thread right_img_grab_thread(&ImageGrabber::right_image_thread_function,
-                                    &igb);
   std::thread left_img_grab_thread(&ImageGrabber::left_image_thread_function,
                                    &igb);
+  std::thread right_img_grab_thread(&ImageGrabber::right_image_thread_function,
+                                    &igb);
+  std::thread imu_grab_thread(&ImuGrabber::imu_thread_function, &imugb);
 
 #ifdef RESTRICT_BANDWIDTH
   std::thread t(update_cpu_utilization);
