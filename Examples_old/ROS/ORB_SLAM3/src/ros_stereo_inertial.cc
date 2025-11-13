@@ -904,7 +904,7 @@ int main(int argc, char** argv) {
   // ros::spin();
   ros::waitForShutdown();
 
-  spinner.stop();
+  // spinner.stop();
 
   cout << "I am saving the trajectories and execution times" << endl;
 
