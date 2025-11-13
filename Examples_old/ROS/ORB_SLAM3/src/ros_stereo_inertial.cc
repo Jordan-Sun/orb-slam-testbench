@@ -899,12 +899,13 @@ int main(int argc, char** argv) {
   // n.subscribe("/camera/right/image_raw", 100,
   // &ImageGrabber::GrabImageRight,&igb);
 
+  std::thread sync_thread(&ImageGrabber::SyncWithImu, &igb);
+
   std::thread imu_grab_thread(&ImuGrabber::imu_thread_function, &imugb);
   std::thread right_img_grab_thread(&ImageGrabber::right_image_thread_function,
                                     &igb);
   std::thread left_img_grab_thread(&ImageGrabber::left_image_thread_function,
                                    &igb);
-  std::thread sync_thread(&ImageGrabber::SyncWithImu, &igb);
 
 #ifdef RESTRICT_BANDWIDTH
   std::thread t(update_cpu_utilization);
