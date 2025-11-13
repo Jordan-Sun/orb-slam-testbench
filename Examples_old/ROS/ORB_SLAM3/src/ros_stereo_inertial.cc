@@ -403,15 +403,42 @@ ros::CallbackQueue imu_queue;
 
 void ImuGrabber::imu_thread_function() {
   ros::NodeHandle imu_nh;
+  const long long period_ns = 2500000;    // 2.5 ms
+  const long long second_ns = 1000000000;  // 1 second
+  struct timespec next_iteration_time, current_time;
 
   imu_nh.setCallbackQueue(&imu_queue);
   ros::Subscriber sub =
       imu_nh.subscribe("/imu", 1000, &ImuGrabber::m_GrabImu, this);
 
-  ros::Rate rate(400);  // 400 Hz
+  // Sleep until the first period
+  next_iteration_time = release_time;
+  clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
   while (ros::ok()) {
     imu_queue.callAvailable();
-    rate.sleep();
+    // Sleep until the next period
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    next_iteration_time.tv_nsec += period_ns;
+    next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+    next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+    if (current_time.tv_sec > next_iteration_time.tv_sec ||
+        (current_time.tv_sec == next_iteration_time.tv_sec &&
+         current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      std::cout << "Deadline " << next_iteration_time.tv_sec << "."
+                << next_iteration_time.tv_nsec
+                << " missed in Imu Grabber, current time "
+                << current_time.tv_sec << "." << current_time.tv_nsec
+                << std::endl;
+    }
+    // Skip until we reach the next period
+    while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+           (current_time.tv_sec == next_iteration_time.tv_sec &&
+            current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      next_iteration_time.tv_nsec += period_ns;
+      next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+      next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+    }
+    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
   }
 }
 ////////////////////////////////////////////////////
@@ -445,15 +472,45 @@ ros::CallbackQueue right_img_queue;
 
 void ImageGrabber::right_image_thread_function() {
   ros::NodeHandle right_img_nh;
+  const long long period_ns = 25000000;   // 25 ms
+  const long long second_ns = 1000000000;  // 1 second
+  struct timespec next_iteration_time, current_time;
 
   right_img_nh.setCallbackQueue(&right_img_queue);
   ros::Subscriber sub = right_img_nh.subscribe(
       "/camera/right/image_raw", 100, &ImageGrabber::m_GrabImageRight, this);
 
-  ros::Rate rate(40);  // 40 Hz => 25 ms
+  // Sleep until the first period
+  next_iteration_time = release_time;
+  clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
+                   NULL);
   while (ros::ok()) {
     right_img_queue.callAvailable();
-    rate.sleep();
+    // Sleep until the next period
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    next_iteration_time.tv_nsec += period_ns;
+    next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+    next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+    if (current_time.tv_sec > next_iteration_time.tv_sec ||
+        (current_time.tv_sec == next_iteration_time.tv_sec &&
+         current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      std::cout << "Deadline "
+                << next_iteration_time.tv_sec << "."
+                << next_iteration_time.tv_nsec
+                << " missed in Right Image Grabber, current time "
+                << current_time.tv_sec << "." << current_time.tv_nsec
+                << std::endl;
+    }
+    // Skip until we reach the next period
+    while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+           (current_time.tv_sec == next_iteration_time.tv_sec &&
+            current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      next_iteration_time.tv_nsec += period_ns;
+      next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+      next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+    }
+    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
+                     NULL);
   }
 }
 ////////////////////////////////////////////////////
@@ -490,15 +547,42 @@ ros::CallbackQueue left_img_queue;
 
 void ImageGrabber::left_image_thread_function() {
   ros::NodeHandle left_img_nh;
+  const long long period_ns = 25000000;    // 25 ms
+  const long long second_ns = 1000000000;  // 1 second
+  struct timespec next_iteration_time, current_time;
 
   left_img_nh.setCallbackQueue(&left_img_queue);
   ros::Subscriber sub = left_img_nh.subscribe(
       "/camera/left/image_raw", 100, &ImageGrabber::m_GrabImageLeft, this);
 
-  ros::Rate rate(40);  // 40 Hz => 25 ms
+  // Sleep until the first period
+  next_iteration_time = release_time;
+  clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
   while (ros::ok()) {
     left_img_queue.callAvailable();
-    rate.sleep();
+    // Sleep until the next period
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    next_iteration_time.tv_nsec += period_ns;
+    next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+    next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+    if (current_time.tv_sec > next_iteration_time.tv_sec ||
+        (current_time.tv_sec == next_iteration_time.tv_sec &&
+         current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      std::cout << "Deadline " << next_iteration_time.tv_sec << "."
+                << next_iteration_time.tv_nsec
+                << " missed in Left Image Grabber, current time "
+                << current_time.tv_sec << "." << current_time.tv_nsec
+                << std::endl;
+    }
+    // Skip until we reach the next period
+    while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+           (current_time.tv_sec == next_iteration_time.tv_sec &&
+            current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      next_iteration_time.tv_nsec += period_ns;
+      next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+      next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+    }
+    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
   }
 }
 ////////////////////////////////////////////////////
@@ -816,8 +900,8 @@ int main(int argc, char** argv) {
   std::thread t(update_cpu_utilization);
 #endif
 
-  ros::AsyncSpinner spinner(4);  // Use 4 threads
-  spinner.start();
+  // ros::AsyncSpinner spinner(4);  // Use 4 threads
+  // spinner.start();
   ros::waitForShutdown();
 
   // ros::spin();
