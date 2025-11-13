@@ -902,18 +902,18 @@ int main(int argc, char** argv) {
 
   // ros::AsyncSpinner spinner(4);  // Use 4 threads
   // spinner.start();
+  ros::spin();
   ros::waitForShutdown();
 
-  // ros::spin();
   cout << "I am saving the trajectories and execution times" << endl;
+
+  // Save the execution times
+  times_saver();
 
   // Save camera trajectory
   SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory_TUM_Format.txt");
   SLAM.SaveTrajectoryTUM("FrameTrajectory_TUM_Format.txt");
   SLAM.SaveTrajectoryKITTI("FrameTrajectory_KITTI_Format.txt");
-
-  // Save the execution times
-  times_saver();
 
   cout << "Hello Bear" << endl;
 
