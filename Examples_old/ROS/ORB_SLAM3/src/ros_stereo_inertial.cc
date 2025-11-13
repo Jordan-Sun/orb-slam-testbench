@@ -953,24 +953,25 @@ void ImageGrabber::SyncWithImu() {
         tImRight = imgRightBuf.front()->header.stamp.toSec();
 
         this->mBufMutexRight.lock();
-        this->mBufMutexLeft.lock();
         while ((tImLeft - tImRight) > maxTimeDiff && imgRightBuf.size() > 1) {
           imgRightBuf.pop();
           tImRight = imgRightBuf.front()->header.stamp.toSec();
         }
+        this->mBufMutexRight.unlock();
+
+        this->mBufMutexLeft.lock();
         while ((tImRight - tImLeft) > maxTimeDiff && imgLeftBuf.size() > 1) {
           imgLeftBuf.pop();
           tImLeft = imgLeftBuf.front()->header.stamp.toSec();
         }
-        // This should prevent that from happening again
+        this->mBufMutexLeft.unlock();
+
         if ((tImLeft - tImRight) > maxTimeDiff ||
             (tImRight - tImLeft) > maxTimeDiff) {
           std::cout << "Stereo Image sync fail: " << tImLeft - tImRight << "."
                     << std::endl;
-          exit(1);
+          continue;
         }
-        this->mBufMutexLeft.unlock();
-        this->mBufMutexRight.unlock();
       }
 
       tImu = mpImuGb->imuBuf.front()->header.stamp.toSec();
