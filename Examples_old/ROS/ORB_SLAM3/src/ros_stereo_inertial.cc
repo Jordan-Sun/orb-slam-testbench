@@ -1068,15 +1068,7 @@ void ImageGrabber::SyncWithImu() {
         }
       }
 
-      tImu = mpImuGb->imuBuf.front()->header.stamp.toSec();
-
-      mpImuGb->mBufMutex.lock();
-      while ((tImLeft - tImu) > maxTimeDiff && mpImuGb->imuBuf.size() > 1) {
-        mpImuGb->imuBuf.pop();
-        tImu = mpImuGb->imuBuf.front()->header.stamp.toSec();
-      }
-      mpImuGb->mBufMutex.unlock();
-      
+      tImu = mpImuGb->imuBuf.back()->header.stamp.toSec();
       if (tImLeft > tImu)
       {
         std::cout << "Time misalignment between IMU and images: "
