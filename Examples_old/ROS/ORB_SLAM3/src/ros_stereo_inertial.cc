@@ -1066,55 +1066,55 @@ void ImageGrabber::SyncWithImu() {
         std::cout << "image frame skipped" << std::endl;
 #endif
       }
-
-      clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-      time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
-                   (end.tv_nsec - start.tv_nsec) / 1000000.0;
-
-      // End of Tracking
-      if (!initialized) {
-        // Set the start time after initialization
-        clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
-        initialized = true;
-      }
-      // Measure the difference between the last iteration time and current time
-      clock_gettime(CLOCK_MONOTONIC, &current_time);
-      double frame_time =
-          (current_time.tv_sec - next_iteration_time.tv_sec) * 1000.0 +
-          (current_time.tv_nsec - next_iteration_time.tv_nsec) / 1000000.0;
-      // Increment the next iteration time by period
-      next_iteration_time.tv_nsec += period_ns;
-      if (next_iteration_time.tv_nsec >= second_ns) {
-        next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
-        next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
-      }
-      // If we are behind schedule, print deadline miss
-      if ((current_time.tv_sec > next_iteration_time.tv_sec) ||
-          (current_time.tv_sec == next_iteration_time.tv_sec &&
-           current_time.tv_nsec > next_iteration_time.tv_nsec)) {
-        std::cout << "Deadline " << next_iteration_time.tv_sec << "."
-                  << next_iteration_time.tv_nsec
-                  << " missed in Sync With IMU, current time "
-                  << current_time.tv_sec << "." << current_time.tv_nsec
-                  << std::endl;
-      } else {
-        std::cout << "Sync With IMU completed at " << current_time.tv_sec << "."
-                  << current_time.tv_nsec << std::endl;
-      }
-
-      next_iteration_time = current_time;
-
-      // Push back the time spent and frame time
-      std::pair<double, double> curr_pair = std::make_pair(frame_time, time_spent);
-      if (!fallback) {
-        tracking_stereo_times.push_back(curr_pair);
-      } else {
-        tracking_mono_times.push_back(curr_pair);
-      }
-
-      clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
-                      NULL);
     }
+
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+    time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
+                 (end.tv_nsec - start.tv_nsec) / 1000000.0;
+
+    // End of Tracking
+    if (!initialized) {
+      // Set the start time after initialization
+      clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
+      initialized = true;
+    }
+    // Measure the difference between the last iteration time and current time
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    double frame_time =
+        (current_time.tv_sec - next_iteration_time.tv_sec) * 1000.0 +
+        (current_time.tv_nsec - next_iteration_time.tv_nsec) / 1000000.0;
+    // Increment the next iteration time by period
+    next_iteration_time.tv_nsec += period_ns;
+    if (next_iteration_time.tv_nsec >= second_ns) {
+      next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+      next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+    }
+    // If we are behind schedule, print deadline miss
+    if ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+        (current_time.tv_sec == next_iteration_time.tv_sec &&
+         current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      std::cout << "Deadline " << next_iteration_time.tv_sec << "."
+                << next_iteration_time.tv_nsec
+                << " missed in Sync With IMU, current time "
+                << current_time.tv_sec << "." << current_time.tv_nsec
+                << std::endl;
+    } else {
+      std::cout << "Sync With IMU completed at " << current_time.tv_sec << "."
+                << current_time.tv_nsec << std::endl;
+    }
+
+    next_iteration_time = current_time;
+
+    // Push back the time spent and frame time
+    std::pair<double, double> curr_pair =
+        std::make_pair(frame_time, time_spent);
+    if (!fallback) {
+      tracking_stereo_times.push_back(curr_pair);
+    } else {
+      tracking_mono_times.push_back(curr_pair);
+    }
+
+    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
   }
 }
 
