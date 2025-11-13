@@ -724,13 +724,6 @@ int main(int argc, char** argv) {
     perror("pthread_setschedparam failed");
     return 1;
   }
-  cpu_set_t cpuset;
-  CPU_ZERO(&cpuset);
-  CPU_SET(2, &cpuset);
-  if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
-    perror("pthread_setaffinity_np failed");
-    return 1;
-  }
   // Sync all threads to release at the same time 30 s later
   clock_gettime(CLOCK_MONOTONIC, &release_time);
   release_time.tv_sec += 30;
@@ -1009,13 +1002,6 @@ void ImageGrabber::SyncWithImu() {
   size_t prio_index = 0;
   if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
     perror("pthread_setschedprio syncwithimu");
-  }
-  // Migrate to CPU 5
-  cpu_set_t cpuset;
-  CPU_ZERO(&cpuset);
-  CPU_SET(5, &cpuset);
-  if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
-    perror("pthread_setaffinity_np failed");
   }
   // Set the start time after initialization
   next_iteration_time = release_time;
