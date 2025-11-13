@@ -900,10 +900,13 @@ int main(int argc, char** argv) {
   std::thread t(update_cpu_utilization);
 #endif
 
-  // ros::AsyncSpinner spinner(4);  // Use 4 threads
-  // spinner.start();
+  ros::AsyncSpinner spinner(4);  // Use 4 threads
+  spinner.start();
+
   // ros::spin();
   ros::waitForShutdown();
+
+  spinner.stop();
 
   cout << "I am saving the trajectories and execution times" << endl;
 
