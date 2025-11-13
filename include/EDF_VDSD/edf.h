@@ -22,35 +22,37 @@ extern struct timespec release_time;
 // Multiple reader with no writer so we should be thread safe
 const std::vector<std::vector<int>> table_0 = {
     {
-        98,
-        96,
-        94,
-        92,
-        90,
-        88,
-    },
-    {
         99,
-        98,
         97,
         96,
         95,
-        94,
         93,
         92,
         91,
-        90,
         89,
         88,
+        87,
+        85,
+        84,
+        83,
+        81,
+        80,
     },
     {
+        98,
+        96,
         94,
+        92,
+        90,
         88,
+        86,
+        84,
+        82,
+        80,
     },
-    // {
-    //     96,
-    //     92,
-    //     88,
-    // },
+    {
+        90,
+        80,
+    },
 };
 // Each thread should keep its own indexing to avoid race conditions
