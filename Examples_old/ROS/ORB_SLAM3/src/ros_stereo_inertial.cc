@@ -939,7 +939,7 @@ void ImageGrabber::SyncWithImu() {
 
   while (1) {
     cv::Mat imLeft, imRight;
-    double tImLeft = 0, tImRight = 0;
+    double tImLeft = 0, tImRight = 0, tImu = 0;
 
     // Time to checkpoint
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
