@@ -980,12 +980,17 @@ void ImageGrabber::SyncWithImu() {
 
         if ((tImLeft - tImRight) > maxTimeDiff ||
             (tImRight - tImLeft) > maxTimeDiff) {
-          // std::cout << "big time difference" << std::endl;
+          std::cout << "Stereo Image sync fail: " << tImLeft - tImRight << "."
+                    << std::endl;
           continue;
         }
       }
 
-      if (tImLeft > mpImuGb->imuBuf.back()->header.stamp.toSec()) continue;
+      if (tImLeft > mpImuGb->imuBuf.back()->header.stamp.toSec()) {
+        std::cout << "IMU Image sync fail: " << tImLeft - tImRight << "."
+                  << std::endl;
+        continue;
+      }
 
       this->mBufMutexLeft.lock();
       imLeft = GetImage(imgLeftBuf.front());

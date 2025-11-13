@@ -344,7 +344,7 @@ void LoopClosing::Run() {
                     << current_time.tv_sec << "." << current_time.tv_nsec
                     << std::endl;
         } else {
-          std::cout << "Sync With IMU completed at " << current_time.tv_sec
+          std::cout << "Loop Closing completed at " << current_time.tv_sec
                     << "." << current_time.tv_nsec << std::endl;
         }
         next_iteration_time = current_time;
