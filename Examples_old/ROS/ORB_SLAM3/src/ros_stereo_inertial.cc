@@ -483,7 +483,6 @@ void ImageGrabber::right_image_thread_function() {
   sch_params.sched_priority = 98;
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam failed");
-    return 1;
   }
 #endif /* SCHED_EDF_VDSD */
 
@@ -569,7 +568,6 @@ void ImageGrabber::left_image_thread_function() {
   sch_params.sched_priority = 98;
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam failed");
-    return 1;
   }
 #endif /* SCHED_EDF_VDSD */
 
