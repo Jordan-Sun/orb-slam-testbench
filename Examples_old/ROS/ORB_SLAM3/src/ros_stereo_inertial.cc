@@ -965,9 +965,6 @@ void ImageGrabber::SyncWithImu() {
         // This should prevent that from happening again
         if ((tImLeft - tImRight) > maxTimeDiff ||
             (tImRight - tImLeft) > maxTimeDiff) {
-          next_iteration_time.tv_nsec += period_ns;
-          next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
-          next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
           std::cout << "Stereo Image sync fail: " << tImLeft - tImRight << "."
                     << std::endl;
           exit(1);
@@ -976,13 +973,13 @@ void ImageGrabber::SyncWithImu() {
         this->mBufMutexRight.unlock();
       }
 
-      if (tImLeft > mpImuGb->imuBuf.back()->header.stamp.toSec())
+      tImu = mpImuGb->imuBuf.front()->header.stamp.toSec();
+      if (tImLeft > tImu)
       {
-        next_iteration_time.tv_nsec += period_ns;
-        next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
-        next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
-        std::cout << "IMU Image sync fail: " << tImLeft - tImRight
-                  << "." << std::endl;
+        std::cout << "IMU Image sync fail: " << tImLeft - tImu << "."
+                  << std::endl;
+        // Wait for imu to arrive
+        usleep(500);
         continue;
       }
 
