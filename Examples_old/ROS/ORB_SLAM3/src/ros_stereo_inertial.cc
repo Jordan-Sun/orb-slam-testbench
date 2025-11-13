@@ -971,17 +971,8 @@ void ImageGrabber::SyncWithImu() {
           next_iteration_time.tv_nsec += period_ns;
           next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
           next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
-          std::cout << "Stereo Image sync fail: " << tImLeft - tImRight
-                    << ", skipping this image frame." << std::endl;
-#ifdef SCHED_EDF_VDSD
-          prio_index = (prio_index + 1) % table_0[SYNC_WITH_IMU_THREAD].size();
-          if (pthread_setschedprio(pthread_self(),
-                                   table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
-            perror("pthread_setschedprio syncwithimu");
-          }
-#endif /* SCHED_EDF_VDSD */
-          clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
-                          NULL);
+          std::cout << "Stereo Image sync fail: " << tImLeft - tImRight << "."
+                    << std::endl;
           continue;
         }
       }
@@ -992,16 +983,7 @@ void ImageGrabber::SyncWithImu() {
         next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
         next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
         std::cout << "IMU Image sync fail: " << tImLeft - tImRight
-                  << ", skipping this image frame." << std::endl;
-#ifdef SCHED_EDF_VDSD
-        prio_index = (prio_index + 1) % table_0[SYNC_WITH_IMU_THREAD].size();
-        if (pthread_setschedprio(pthread_self(),
-                                 table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
-          perror("pthread_setschedprio syncwithimu");
-        }
-#endif /* SCHED_EDF_VDSD */
-        clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
-                        NULL);
+                  << "." << std::endl;
         continue;
       }
 
