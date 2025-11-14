@@ -372,6 +372,8 @@ void ImuGrabber::m_GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
   // printf("Resolution: %ld seconds and %ld nanoseconds\n", res.tv_sec,
   // res.tv_nsec);
 
+  // printf("IMU grabbed at time %f\n", imu_msg->header.stamp.toSec());
+
   struct timespec start, end;
 
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
@@ -430,6 +432,12 @@ void ImuGrabber::imu_thread_function() {
                 << current_time.tv_sec << "." << current_time.tv_nsec
                 << std::endl;
     }
+    // else {
+    //   std::cout << "Imu Grabber thread completed at "
+    //             << current_time.tv_sec << "." << current_time.tv_nsec
+    //             << std::endl;
+    // }
+    
     // Skip until we reach the next period
     while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
            (current_time.tv_sec == next_iteration_time.tv_sec &&
@@ -451,6 +459,8 @@ void ImageGrabber::m_GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
   // pid_t pid = getpid();
   // printf("Right image Process ID: %d\n", pid);
   // // End Check the pthread
+
+  // printf("Right image grabbed at time %f\n", img_msg->header.stamp.toSec());
 
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
@@ -511,6 +521,12 @@ void ImageGrabber::right_image_thread_function() {
                 << current_time.tv_sec << "." << current_time.tv_nsec
                 << std::endl;
     }
+    // else {
+    //   std::cout << "Right Image Grabber thread completed at "
+    //             << current_time.tv_sec << "." << current_time.tv_nsec
+    //             << std::endl;
+    // }
+
     // Skip until we reach the next period
     while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
            (current_time.tv_sec == next_iteration_time.tv_sec &&
@@ -533,6 +549,8 @@ void ImageGrabber::m_GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
   // pid_t pid = getpid();
   // printf("Left image Process ID: %d\n", pid);
   // End Check the pthread
+
+  // printf("Left image grabbed at time %f\n", img_msg->header.stamp.toSec());
 
   struct timespec start, end;
 
@@ -593,7 +611,13 @@ void ImageGrabber::left_image_thread_function() {
                 << " missed in Left Image Grabber, current time "
                 << current_time.tv_sec << "." << current_time.tv_nsec
                 << std::endl;
-    }
+    } 
+    // else {
+    //   std::cout << "Left Image Grabber thread completed at "
+    //             << current_time.tv_sec << "." << current_time.tv_nsec
+    //             << std::endl;
+    // }
+
     // Skip until we reach the next period
     while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
            (current_time.tv_sec == next_iteration_time.tv_sec &&
@@ -918,13 +942,7 @@ int main(int argc, char** argv) {
   std::thread t(update_cpu_utilization);
 #endif
 
-  // ros::AsyncSpinner spinner(4);  // Use 4 threads
-  // spinner.start();
-
-  // ros::spin();
   ros::waitForShutdown();
-
-  // spinner.stop();
 
   cout << "I am saving the trajectories and execution times" << endl;
 
