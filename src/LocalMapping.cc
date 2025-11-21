@@ -30,7 +30,7 @@
 #define SCHED_EDF_VDSD
 
 #ifdef SCHED_EDF_VDSD
-#include "EDF_VDSD/edf.h"
+// #include "EDF_VDSD/edf.h"
 #endif /* SCHED_EDF_VDSD */
 
 using namespace std;
@@ -83,7 +83,11 @@ void LocalMapping::Run() {
 #ifdef SCHED_EDF_VDSD
   // Set initial priority and policy
   struct sched_param sch_params;
-  sch_params.sched_priority = table_0[LOCAL_MAPPING_THREAD][lm_prio_index];
+//   sch_params.sched_priority = table_0[LOCAL_MAPPING_THREAD][lm_prio_index];
+//   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+//     perror("pthread_setschedparam localmapping init");
+//   }
+  sch_params.sched_priority = 95;
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam localmapping init");
   }
@@ -367,13 +371,13 @@ void LocalMapping::Run() {
         ba_exe_times.push_back(curr_pair);
 
         // Update priority and sleep until next iteration
-#ifdef SCHED_EDF_VDSD
-        lm_prio_index = (lm_prio_index + 1) % table_0[LOCAL_MAPPING_THREAD].size();
-        if (pthread_setschedprio(
-                pthread_self(), table_0[LOCAL_MAPPING_THREAD][lm_prio_index])) {
-          perror("pthread_setschedprio localmapping");
-        }
-#endif /* SCHED_EDF_VDSD */
+// #ifdef SCHED_EDF_VDSD
+//         lm_prio_index = (lm_prio_index + 1) % table_0[LOCAL_MAPPING_THREAD].size();
+//         if (pthread_setschedprio(
+//                 pthread_self(), table_0[LOCAL_MAPPING_THREAD][lm_prio_index])) {
+//           perror("pthread_setschedprio localmapping");
+//         }
+// #endif /* SCHED_EDF_VDSD */
         clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
                         NULL);
     }
