@@ -53,7 +53,7 @@
 
 // For edf-vdsd scheduling
 #ifdef SCHED_EDF_VDSD
-#include "EDF_VDSD/edf.h"
+// #include "EDF_VDSD/edf.h"
 #endif /* SCHED_EDF_VDSD */
 
 using namespace std;
@@ -1045,7 +1045,10 @@ void ImageGrabber::SyncWithImu() {
 #ifdef SCHED_EDF_VDSD
   // Set initial priority
   size_t prio_index = 0;
-  if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
+  // if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
+  //   perror("pthread_setschedprio syncwithimu");
+  // }
+  if (pthread_setschedprio(pthread_self(), 97)) {
     perror("pthread_setschedprio syncwithimu");
   }
   // Migrate to CPU 5
@@ -1100,7 +1103,7 @@ void ImageGrabber::SyncWithImu() {
         }
       }
 
-      tImu = mpImuGb->imuBuf.back()->header.stamp.toSec();
+      tImu = mpImuGb->imuBuf.front()->header.stamp.toSec();
       if (tImLeft > tImu)
       {
         std::cout << "Time misalignment between IMU and images: "
@@ -1239,13 +1242,13 @@ void ImageGrabber::SyncWithImu() {
 #ifdef FALLBACK_TO_MONO
       fallback = fallback_flag.load();
 #endif /* FALLBACK_TO_MONO */
-#ifdef SCHED_EDF_VDSD
-      prio_index = (prio_index + 1) % table_0[SYNC_WITH_IMU_THREAD].size();
-      if (pthread_setschedprio(pthread_self(),
-                               table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
-        perror("pthread_setschedprio syncwithimu");
-      }
-#endif /* SCHED_EDF_VDSD */
+// #ifdef SCHED_EDF_VDSD
+//       prio_index = (prio_index + 1) % table_0[SYNC_WITH_IMU_THREAD].size();
+//       if (pthread_setschedprio(pthread_self(),
+//                                table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
+//         perror("pthread_setschedprio syncwithimu");
+//       }
+// #endif /* SCHED_EDF_VDSD */
       clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
                       NULL);
     } else {
