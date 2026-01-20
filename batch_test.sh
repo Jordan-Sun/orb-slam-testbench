@@ -34,7 +34,8 @@ else
 fi
 
 # Start ROS core in the background
-export ROS_PACKAGE_PATH=/home/orb-slam-elastic/Examples_old/ROS:$ROS_PACKAGE_PATH
+export ORB_SLAM_PATH="$HOME/Documents/orb-slam-testbench"
+export ROS_PACKAGE_PATH="$ORB_SLAM_PATH:$ROS_PACKAGE_PATH"
 roscore &
 ROSCORE_PID=$!
 
@@ -57,15 +58,16 @@ do
 
     # Start ORB SLAM in the background and pipe its output to a log file
     # use POSIX-compatible redirection so script works under /bin/sh too
-    taskset -c 2 rosrun ORB_SLAM3 Stereo_Inertial /home/orb-slam-elastic/Vocabulary/ORBvoc.txt /home/orb-slam-elastic/Examples_old/Stereo-Inertial/EuRoC.yaml true >> orb_slam.log 2>&1 &
+    #taskset -c 2 rosrun ORB_SLAM3 Stereo_Inertial $ORB_SLAM_PATH/Vocabulary/ORBvoc.txt $ORB_SLAM_PATH/Examples_old/Stereo-Inertial/EuRoC.yaml true >> orb_slam.log 2>&1 &
+    rosrun ORB_SLAM3 Stereo_Inertial $ORB_SLAM_PATH/Vocabulary/ORBvoc.txt $ORB_SLAM_PATH/Examples_old/Stereo-Inertial/EuRoC.yaml true >> orb_slam.log 2>&1 &
     ORB_PID=$!
 
-    # Sleep for 5 seconds to ensure ORB SLAM starts properly
-    sleep 5
+    # Sleep for 35 seconds to ensure ORB SLAM starts properly
+    sleep 35
 
     # Play the bag file, and kill the ORB SLAM process with SIGINT when done
-    rosbag play /data/MH_01_easy.bag /cam0/image_raw:=/camera/left/image_raw /cam1/image_raw:=/camera/right/image_raw /imu0:=/imu
-    sleep 1
+    rosbag play ~/Downloads/MH_01_easy.bag /cam0/image_raw:=/camera/left/image_raw /cam1/image_raw:=/camera/right/image_raw /imu0:=/imu
+    sleep 5
     kill -SIGINT "$ORB_PID"
 
     # Leave the directory

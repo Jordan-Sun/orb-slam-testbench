@@ -31,6 +31,7 @@
 
 #ifdef SCHED_EDF_VDSD
 // #include "EDF_VDSD/edf.h"
+extern struct timespec release_time;
 #endif /* SCHED_EDF_VDSD */
 
 using namespace std;
@@ -99,7 +100,7 @@ void LocalMapping::Run() {
     perror("pthread_setaffinity_np failed");
   }
   next_iteration_time = release_time;
-    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
+  clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time, NULL);
 #endif /* SCHED_EDF_VDSD */
 
   while (!mbForceStop) {

@@ -32,6 +32,7 @@
 
 #ifdef SCHED_EDF_VDSD
 // #include "EDF_VDSD/edf.h"
+extern struct timespec release_time;
 #endif /* SCHED_EDF_VDSD */
 
 namespace ORB_SLAM3
