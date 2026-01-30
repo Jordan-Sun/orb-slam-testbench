@@ -77,4 +77,4 @@ done;
 # Kill the roscore process
 kill -SIGINT "$ROSCORE_PID"
 
-# trace-cmd record -e sched_switch -P $!
+# sudo trace-cmd record --profile -P $!
