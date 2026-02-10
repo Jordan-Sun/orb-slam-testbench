@@ -76,3 +76,5 @@ done;
 
 # Kill the roscore process
 kill -SIGINT "$ROSCORE_PID"
+
+# sudo trace-cmd record --profile -P $!
