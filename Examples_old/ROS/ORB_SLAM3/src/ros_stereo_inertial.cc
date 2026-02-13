@@ -353,6 +353,7 @@ int times_saver() {
 
 ///////////////////////////////////////////////////////////////
 void ImuGrabber::m_GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
+
   // if(imu_period_need_update == true) {
   //   // set up the period
 
@@ -380,13 +381,6 @@ void ImuGrabber::m_GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
 
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
-  // // Check the pthread id
-  pid_t tid = gettid();
-  printf("This is in my crafted queue Thread ID: %d\n", tid);
-  pid_t pid = getpid();
-  printf("This is in my crafted queue Process ID: %d\n", pid);
-  // // End Check the pthread
-
   mBufMutex.lock();
   imuBuf.push(imu_msg);
   mBufMutex.unlock();
@@ -406,6 +400,14 @@ void ImuGrabber::m_GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
 ros::CallbackQueue imu_queue;
 
 void ImuGrabber::imu_thread_function() {
+  static bool tid_printed = false;
+  if (!tid_printed) {
+    pid_t tid = gettid();
+    pid_t pid = getpid();
+    printf("IMU Thread - TID: %d, PID: %d\n", tid, pid);
+    tid_printed = true;
+  }
+
   ros::NodeHandle imu_nh;
   const long long period_ns = 2500000;    // 2.5 ms
   const long long second_ns = 1000000000;  // 1 second
@@ -455,12 +457,6 @@ void ImuGrabber::imu_thread_function() {
 
 ///////////////////////////////////////////////////////////////
 void ImageGrabber::m_GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
-  // // Check the pthread id
-  pid_t tid = gettid();
-  printf("Right image Thread ID: %d\n", tid);
-  pid_t pid = getpid();
-  printf("Right image Process ID: %d\n", pid);
-  // // End Check the pthread
 
   // printf("Right image grabbed at time %f\n", img_msg->header.stamp.toSec());
 
@@ -483,6 +479,14 @@ void ImageGrabber::m_GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
 ros::CallbackQueue right_img_queue;
 
 void ImageGrabber::right_image_thread_function() {
+  static bool tid_printed = false;
+  if (!tid_printed) {
+    pid_t tid = gettid();
+    pid_t pid = getpid();
+    printf("Right Image Thread - TID: %d, PID: %d\n", tid, pid);
+    tid_printed = true;
+  }
+
   ros::NodeHandle right_img_nh;
   const long long period_ns = 25000000;   // 25 ms
   const long long second_ns = 1000000000;  // 1 second
@@ -545,12 +549,6 @@ void ImageGrabber::right_image_thread_function() {
 
 ///////////////////////////////////////////////////////////////
 void ImageGrabber::m_GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
-  // Check the pthread id
-  pid_t tid = gettid();
-  printf("Left image Thread ID: %d\n", tid);
-  pid_t pid = getpid();
-  printf("Left image Process ID: %d\n", pid);
-  // End Check the pthread
 
   // printf("Left image grabbed at time %f\n", img_msg->header.stamp.toSec());
 
@@ -576,6 +574,14 @@ void ImageGrabber::m_GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
 ros::CallbackQueue left_img_queue;
 
 void ImageGrabber::left_image_thread_function() {
+  static bool tid_printed = false;
+  if (!tid_printed) {
+    pid_t tid = gettid();
+    pid_t pid = getpid();
+    printf("Left Image Thread - TID: %d, PID: %d\n", tid, pid);
+    tid_printed = true;
+  }
+
   ros::NodeHandle left_img_nh;
   const long long period_ns = 25000000;    // 25 ms
   const long long second_ns = 1000000000;  // 1 second
@@ -634,6 +640,14 @@ void ImageGrabber::left_image_thread_function() {
 ////////////////////////////////////////////////////
 
 void update_cpu_utilization() {
+  static bool tid_printed = false;
+  if (!tid_printed) {
+    pid_t tid = gettid();
+    pid_t pid = getpid();
+    printf("CPU Utilization Thread - TID: %d, PID: %d\n", tid, pid);
+    tid_printed = true;
+  }
+
 #ifdef DEBUG_OVERHEAD
   struct timespec t1, t2, t3, t4, t5;
   float tmp_reader_1, tmp_reader_2, tmp_reader_3;
@@ -772,7 +786,11 @@ int main(int argc, char** argv) {
   }
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
-  CPU_SET(2, &cpuset);
+  long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+  for (long i = 0; i < ncpus; i++)
+  {
+    CPU_SET(i, &cpuset);
+  }
   if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
     perror("pthread_setaffinity_np failed");
     return 1;
@@ -861,6 +879,15 @@ int main(int argc, char** argv) {
   std::cout << "The system will fallback to monocular at iteration: "
             << fallback_iteration << std::endl;
 #endif /* FALLBACK_TO_MONO */
+
+  static bool tid_printed = false;
+  if (!tid_printed)
+  {
+    pid_t tid = gettid();
+    pid_t pid = getpid();
+    printf("Main Thread - TID: %d, PID: %d\n", tid, pid);
+    tid_printed = true;
+  }
 
   // Create SLAM system. It initializes all system threads and gets ready to
   // process frames.
@@ -964,13 +991,6 @@ int main(int argc, char** argv) {
 }
 
 void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
-  // // Check the pthread id
-  pid_t tid = gettid();
-  printf("Left image Thread ID: %d\n", tid);
-  pid_t pid = getpid();
-  printf("Left image Process ID: %d\n", pid);
-  // // End Check the pthread
-
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
@@ -991,13 +1011,6 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
 }
 
 void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
-  // // Check the pthread id
-  pid_t tid = gettid();
-  printf("Right image Thread ID: %d\n", tid);
-  pid_t pid = getpid();
-  printf("Right image Process ID: %d\n", pid);
-  // // End Check the pthread
-
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
@@ -1033,6 +1046,14 @@ cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr& img_msg) {
 }
 
 void ImageGrabber::SyncWithImu() {
+  static bool tid_printed = false;
+  if (!tid_printed) {
+    pid_t tid = gettid();
+    pid_t pid = getpid();
+    printf("Sync With IMU Thread - TID: %d, PID: %d\n", tid, pid);
+    tid_printed = true;
+  }
+
   struct timespec start, end;
   struct timespec next_iteration_time, current_time;
   double time_spent;
@@ -1271,13 +1292,6 @@ void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
 
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-
-  // // Check the pthread id
-  pid_t tid = gettid();
-  printf("IMU Thread ID: %d\n", tid);
-  pid_t pid = getpid();
-  printf("IMU Process ID: %d\n", pid);
-  // // End Check the pthread
 
   mBufMutex.lock();
   imuBuf.push(imu_msg);
