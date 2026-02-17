@@ -1077,7 +1077,11 @@ void ImageGrabber::SyncWithImu() {
   // Migrate to CPU 5
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
-  CPU_SET(5, &cpuset);
+  long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+  for (long i = 0; i < ncpus; i++)
+  {
+    CPU_SET(i, &cpuset);
+  }
   if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
     perror("pthread_setaffinity_np failed");
   }

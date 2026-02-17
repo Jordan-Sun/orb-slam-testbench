@@ -101,6 +101,15 @@ void LoopClosing::Run() {
 
 #ifdef SCHED_EDF_VDSD
   // Set initial priority and policy
+  static bool tid_printed = false;
+  if (!tid_printed)
+  {
+      pid_t tid = gettid();
+      pid_t pid = getpid();
+      printf("Loop Closing Thread - TID: %d, PID: %d\n", tid, pid);
+      tid_printed = true;
+  }
+
   struct sched_param sch_params;
   size_t prio_index = 0;
 //   sch_params.sched_priority = table_0[LOOP_CLOSING_THREAD][prio_index];
@@ -111,10 +120,13 @@ void LoopClosing::Run() {
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam loopclosing init");
   }
-  // Migrate to CPU 3
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
-  CPU_SET(3, &cpuset);
+  long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+  for (long i = 0; i < ncpus; i++)
+  {
+      CPU_SET(i, &cpuset);
+  }
   if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
     perror("pthread_setaffinity_np failed");
   }
