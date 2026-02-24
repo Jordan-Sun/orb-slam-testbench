@@ -116,8 +116,8 @@ void LoopClosing::Run() {
 //   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
 //     perror("pthread_setschedparam loopclosing init");
 //   }
-  sch_params.sched_priority = 96;
-  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+  sch_params.sched_priority = 46;
+  if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params)) {
     perror("pthread_setschedparam loopclosing init");
   }
   cpu_set_t cpuset;
@@ -376,11 +376,12 @@ void LoopClosing::Run() {
                     << " missed in Loop Closing, current time "
                     << current_time.tv_sec << "." << current_time.tv_nsec
                     << std::endl;
-        } else {
-          std::cout << "Loop Closing thread completed at "
-                    << current_time.tv_sec << "." << current_time.tv_nsec
-                    << std::endl;
         }
+        // else {
+        //   std::cout << "Loop Closing thread completed at "
+        //             << current_time.tv_sec << "." << current_time.tv_nsec
+        //             << std::endl;
+        // }
 
         while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
                (current_time.tv_sec == next_iteration_time.tv_sec &&

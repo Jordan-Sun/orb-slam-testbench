@@ -97,8 +97,8 @@ void LocalMapping::Run() {
 //   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
 //     perror("pthread_setschedparam localmapping init");
 //   }
-  sch_params.sched_priority = 95;
-  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+  sch_params.sched_priority = 45;
+  if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params)) {
     perror("pthread_setschedparam localmapping init");
   }
   cpu_set_t cpuset;
@@ -361,11 +361,12 @@ void LocalMapping::Run() {
                     << " missed in Local Mapping, current time "
                     << current_time.tv_sec << "." << current_time.tv_nsec
                     << std::endl;
-        } else {
-          std::cout << "Local Mapping thread completed at "
-                    << current_time.tv_sec << "." << current_time.tv_nsec
-                    << std::endl;
         }
+        // else {
+        //   std::cout << "Local Mapping thread completed at "
+        //             << current_time.tv_sec << "." << current_time.tv_nsec
+        //             << std::endl;
+        // }
 
         while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
                (current_time.tv_sec == next_iteration_time.tv_sec &&

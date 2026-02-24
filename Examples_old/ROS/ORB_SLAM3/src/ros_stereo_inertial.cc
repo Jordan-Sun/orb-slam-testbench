@@ -21,8 +21,9 @@
 
 #define FALLBACK_TO_MONO
 #define SCHED_EDF_VDSD
+// #define RESTRICT_BANDWIDTH
 
-#define _GNU_SOURCE
+// #define _GNU_SOURCE
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -413,6 +414,16 @@ void ImuGrabber::imu_thread_function() {
   const long long second_ns = 1000000000;  // 1 second
   struct timespec next_iteration_time, current_time;
 
+#ifdef SCHED_EDF_VDSD
+  // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
+  // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
+  struct sched_param sch_params;
+  sch_params.sched_priority = 48;
+  if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params)) {
+    perror("pthread_setschedparam failed");
+  }
+#endif /* SCHED_EDF_VDSD */
+
   imu_nh.setCallbackQueue(&imu_queue);
   ros::Subscriber sub =
       imu_nh.subscribe("/imu", 1000, &ImuGrabber::m_GrabImu, this);
@@ -496,8 +507,8 @@ void ImageGrabber::right_image_thread_function() {
   // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
   // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
   struct sched_param sch_params;
-  sch_params.sched_priority = 98;
-  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+  sch_params.sched_priority = 48;
+  if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params)) {
     perror("pthread_setschedparam failed");
   }
 #endif /* SCHED_EDF_VDSD */
@@ -591,8 +602,8 @@ void ImageGrabber::left_image_thread_function() {
   // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
   // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
   struct sched_param sch_params;
-  sch_params.sched_priority = 98;
-  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
+  sch_params.sched_priority = 48;
+  if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params)) {
     perror("pthread_setschedparam failed");
   }
 #endif /* SCHED_EDF_VDSD */
@@ -775,30 +786,11 @@ void update_cpu_utilization() {
 }
 
 int main(int argc, char** argv) {
-#ifdef SCHED_EDF_VDSD
-  // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
-  // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
-  struct sched_param sch_params;
-  sch_params.sched_priority = 99;
-  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
-    perror("pthread_setschedparam failed");
-    return 1;
-  }
-  cpu_set_t cpuset;
-  CPU_ZERO(&cpuset);
-  long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
-  for (long i = 0; i < ncpus; i++)
   {
-    CPU_SET(i, &cpuset);
+    pid_t tid = gettid();
+    pid_t pid = getpid();
+    printf("Main Thread Before ROS Init - TID: %d, PID: %d\n", tid, pid);
   }
-  if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
-    perror("pthread_setaffinity_np failed");
-    return 1;
-  }
-  // Sync all threads to release at the same time 30 s later
-  clock_gettime(CLOCK_MONOTONIC, &release_time);
-  release_time.tv_sec += 30;
-#endif /* SCHED_EDF_VDSD */
 
   ros::init(argc, argv, "Stereo_Inertial");
   ros::NodeHandle n("~");
@@ -823,6 +815,36 @@ int main(int argc, char** argv) {
   //     return 1;
   // }
   // End - Set the RR scheduling
+
+#ifdef SCHED_EDF_VDSD
+  // Pthread cannot be scheduled by SCHED_DEADLINE, so we instead use
+  // pthread_setschedprio and SCHED_FIFO to implement EDF_VDSD scheduling.
+  struct sched_param sch_params;
+  sch_params.sched_priority = 40;
+  if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params))
+  {
+    perror("pthread_setschedparam failed");
+    return 1;
+  }
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+  for (long i = 0; i < ncpus; i++)
+  {
+    CPU_SET(i, &cpuset);
+  }
+  if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
+  {
+    perror("pthread_setaffinity_np failed");
+    return 1;
+  }
+  clock_gettime(CLOCK_MONOTONIC, &release_time);
+  // Sleep 10 seconds first to wait for ftrace to attach
+  release_time.tv_sec += 10;
+  clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &release_time, NULL);
+  // Sync all threads to release at the same time 30 s later
+  release_time.tv_sec += 20;
+#endif /* SCHED_EDF_VDSD */
 
 #ifdef RESTRICT_BANDWIDTH
   // Set the CGROUP
@@ -879,15 +901,6 @@ int main(int argc, char** argv) {
   std::cout << "The system will fallback to monocular at iteration: "
             << fallback_iteration << std::endl;
 #endif /* FALLBACK_TO_MONO */
-
-  static bool tid_printed = false;
-  if (!tid_printed)
-  {
-    pid_t tid = gettid();
-    pid_t pid = getpid();
-    printf("Main Thread - TID: %d, PID: %d\n", tid, pid);
-    tid_printed = true;
-  }
 
   // Create SLAM system. It initializes all system threads and gets ready to
   // process frames.
@@ -970,8 +983,23 @@ int main(int argc, char** argv) {
 #ifdef RESTRICT_BANDWIDTH
   std::thread t(update_cpu_utilization);
 #endif
+  ros::AsyncSpinner spinner(4); // Use 4 threads
+  spinner.start();
 
-  ros::waitForShutdown();
+  // ros::waitForShutdown();
+
+// #ifdef SCHED_EDF_VDSD
+//   sch_params.sched_priority = 49;
+//   if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params))
+//   {
+//     perror("pthread_setschedparam failed");
+//     return 1;
+//   }
+// #endif /* SCHED_EDF_VDSD */
+
+  while(ros::ok()) {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
 
   cout << "I am saving the trajectories and execution times" << endl;
 
@@ -1074,7 +1102,6 @@ void ImageGrabber::SyncWithImu() {
   if (pthread_setschedprio(pthread_self(), 97)) {
     perror("pthread_setschedprio syncwithimu");
   }
-  // Migrate to CPU 5
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
@@ -1094,12 +1121,12 @@ void ImageGrabber::SyncWithImu() {
     cv::Mat imLeft, imRight;
     double tImLeft = 0, tImRight = 0, tImu = 0;
 
+    // Time to checkpoint
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+
     // Upon fallback, ignore the right image buffer
     if (!imgLeftBuf.empty() && !mpImuGb->imuBuf.empty() &&
         (fallback || !imgRightBuf.empty())) {
-
-      // Time to checkpoint
-      clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
       tImLeft = imgLeftBuf.front()->header.stamp.toSec();
 
@@ -1125,8 +1152,7 @@ void ImageGrabber::SyncWithImu() {
           std::cout << "Time misalignment between left and right images: "
                     << std::fixed << std::setprecision(6) << tImLeft - tImRight
                     << " s" << std::endl;
-          usleep(500);
-          continue;
+          goto tracking_sleep;
         }
       }
 
@@ -1136,8 +1162,7 @@ void ImageGrabber::SyncWithImu() {
         std::cout << "Time misalignment between IMU and images: "
                   << std::fixed << std::setprecision(6) << tImLeft - tImu
                   << " s" << std::endl;
-        usleep(500);
-        continue;
+        goto tracking_sleep;
       }
 
       this->mBufMutexLeft.lock();
@@ -1214,60 +1239,61 @@ void ImageGrabber::SyncWithImu() {
         std::cout << "image frame skipped" << std::endl;
 #endif
       }
+    }
 
-      clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-      time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
-                   (end.tv_nsec - start.tv_nsec) / 1000000.0;
+    // End of Tracking
+tracking_sleep:
+    // Measure the difference between the last iteration time and current time
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    double frame_time =
+        (current_time.tv_sec - next_iteration_time.tv_sec) * 1000.0 +
+        (current_time.tv_nsec - next_iteration_time.tv_nsec) / 1000000.0;
+    // Increment the next iteration time by period
+    next_iteration_time.tv_nsec += period_ns;
+    next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
+    next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
+    // If we are behind schedule, print deadline miss
+    if ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+        (current_time.tv_sec == next_iteration_time.tv_sec &&
+          current_time.tv_nsec > next_iteration_time.tv_nsec)) {
+      std::cout << "Deadline " << next_iteration_time.tv_sec << "."
+                << next_iteration_time.tv_nsec
+                << " missed in Sync With IMU, current time "
+                << current_time.tv_sec << "." << current_time.tv_nsec
+                << std::endl;
+    } else {
+      std::cout << "Sync With IMU thread iteration " << current_iteration
+                << " completed at " << current_time.tv_sec << "."
+                << current_time.tv_nsec << std::endl;
+    }
 
-      // End of Tracking
-      // Measure the difference between the last iteration time and current time
-      clock_gettime(CLOCK_MONOTONIC, &current_time);
-      double frame_time =
-          (current_time.tv_sec - next_iteration_time.tv_sec) * 1000.0 +
-          (current_time.tv_nsec - next_iteration_time.tv_nsec) / 1000000.0;
-      // Increment the next iteration time by period
+    while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
+            (current_time.tv_sec == next_iteration_time.tv_sec &&
+            current_time.tv_nsec > next_iteration_time.tv_nsec)) {
       next_iteration_time.tv_nsec += period_ns;
       next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
       next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
-      // If we are behind schedule, print deadline miss
-      if ((current_time.tv_sec > next_iteration_time.tv_sec) ||
-          (current_time.tv_sec == next_iteration_time.tv_sec &&
-           current_time.tv_nsec > next_iteration_time.tv_nsec)) {
-        std::cout << "Deadline " << next_iteration_time.tv_sec << "."
-                  << next_iteration_time.tv_nsec
-                  << " missed in Sync With IMU, current time "
-                  << current_time.tv_sec << "." << current_time.tv_nsec
-                  << std::endl;
-      } else {
-        std::cout << "Sync With IMU thread " << current_iteration
-                  << " completed at " << current_time.tv_sec << "."
-                  << current_time.tv_nsec << std::endl;
-      }
-
-      while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
-             (current_time.tv_sec == next_iteration_time.tv_sec &&
-              current_time.tv_nsec > next_iteration_time.tv_nsec)) {
-        next_iteration_time.tv_nsec += period_ns;
-        next_iteration_time.tv_sec += next_iteration_time.tv_nsec / second_ns;
-        next_iteration_time.tv_nsec = next_iteration_time.tv_nsec % second_ns;
 #ifdef SCHED_EDF_VDSD
-        // Make sure the priority index is updated accordingly each skip
-        prio_index = prio_index + 1;
+      // Make sure the priority index is updated accordingly each skip
+      prio_index = prio_index + 1;
 #endif /* SCHED_EDF_VDSD */
-      }
+    }
 
-      // Push back the time spent and frame time
-      std::pair<double, double> curr_pair =
-          std::make_pair(frame_time, time_spent);
-      if (!fallback) {
-        tracking_stereo_times.push_back(curr_pair);
-      } else {
-        tracking_mono_times.push_back(curr_pair);
-      }
+    // Push back the time spent and frame time
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+    time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
+                  (end.tv_nsec - start.tv_nsec) / 1000000.0;
+    std::pair<double, double> curr_pair =
+        std::make_pair(frame_time, time_spent);
+    if (!fallback) {
+      tracking_stereo_times.push_back(curr_pair);
+    } else {
+      tracking_mono_times.push_back(curr_pair);
+    }
 
-      // Update priority and sleep until next iteration
+    // Update priority and sleep until next iteration
 #ifdef FALLBACK_TO_MONO
-      fallback = fallback_flag.load();
+    fallback = fallback_flag.load();
 #endif /* FALLBACK_TO_MONO */
 // #ifdef SCHED_EDF_VDSD
 //       prio_index = (prio_index + 1) % table_0[SYNC_WITH_IMU_THREAD].size();
@@ -1276,12 +1302,8 @@ void ImageGrabber::SyncWithImu() {
 //         perror("pthread_setschedprio syncwithimu");
 //       }
 // #endif /* SCHED_EDF_VDSD */
-      clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
-                      NULL);
-    } else {
-      // Buffers are empty, wait for 500 us
-      usleep(500);
-    }
+    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
+                    NULL);
   }
 }
 
