@@ -94,7 +94,7 @@ void LoopClosing::SetLocalMapper(LocalMapping *pLocalMapper)
 
 void LoopClosing::Run() {
   struct timespec next_iteration_time, current_time;
-  const long long period_ns = 150000000;  // 150 ms
+  const long long period_ns = 25000000;    // 25 ms
   const long long second_ns = 1000000000; // 1 second
 
   mbFinished = false;
