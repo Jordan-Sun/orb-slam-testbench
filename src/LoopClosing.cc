@@ -31,7 +31,7 @@
 #define SCHED_EDF_VDSD
 
 #ifdef SCHED_EDF_VDSD
-// #include "EDF_VDSD/edf.h"
+#include "EDF_VDSD/edf.h"
 extern struct timespec release_time;
 #endif /* SCHED_EDF_VDSD */
 
@@ -112,14 +112,14 @@ void LoopClosing::Run() {
 
   struct sched_param sch_params;
   size_t prio_index = 0;
-//   sch_params.sched_priority = table_0[LOOP_CLOSING_THREAD][prio_index];
-//   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
-//     perror("pthread_setschedparam loopclosing init");
-//   }
-  sch_params.sched_priority = 46;
-  if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params)) {
+  sch_params.sched_priority = table_0[LOOP_CLOSING_THREAD][prio_index];
+  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam loopclosing init");
   }
+//   sch_params.sched_priority = 46;
+//   if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params)) {
+//     perror("pthread_setschedparam loopclosing init");
+//   }
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   long ncpus = sysconf(_SC_NPROCESSORS_ONLN);

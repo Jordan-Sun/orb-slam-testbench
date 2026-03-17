@@ -56,7 +56,7 @@
 
 // For edf-vdsd scheduling
 #ifdef SCHED_EDF_VDSD
-// #include "EDF_VDSD/edf.h"
+#include "EDF_VDSD/edf.h"
 #endif /* SCHED_EDF_VDSD */
 
 using namespace std;
@@ -839,11 +839,11 @@ int main(int argc, char** argv) {
     return 1;
   }
   clock_gettime(CLOCK_MONOTONIC, &release_time);
-  // Sleep 10 seconds first to wait for ftrace to attach
-  release_time.tv_sec += 10;
+  // // Sleep 10 seconds first to wait for ftrace to attach
+  // release_time.tv_sec += 10;
   clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &release_time, NULL);
-  // Sync all threads to release at the same time 30 s later
-  release_time.tv_sec += 20;
+  // Sync all threads to release at the same time 5 s later
+  release_time.tv_sec += 5;
 #endif /* SCHED_EDF_VDSD */
 
 #ifdef RESTRICT_BANDWIDTH
@@ -1096,12 +1096,12 @@ void ImageGrabber::SyncWithImu() {
 #ifdef SCHED_EDF_VDSD
   // Set initial priority
   size_t prio_index = 0;
-  // if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
-  //   perror("pthread_setschedprio syncwithimu");
-  // }
-  if (pthread_setschedprio(pthread_self(), 97)) {
+  if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
     perror("pthread_setschedprio syncwithimu");
   }
+  // if (pthread_setschedprio(pthread_self(), 97)) {
+  //   perror("pthread_setschedprio syncwithimu");
+  // }
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
@@ -1261,11 +1261,12 @@ tracking_sleep:
                 << " missed in Sync With IMU, current time "
                 << current_time.tv_sec << "." << current_time.tv_nsec
                 << std::endl;
-    } else {
-      std::cout << "Sync With IMU thread iteration " << current_iteration
-                << " completed at " << current_time.tv_sec << "."
-                << current_time.tv_nsec << std::endl;
     }
+    // else {
+    //   std::cout << "Sync With IMU thread iteration " << current_iteration
+    //             << " completed at " << current_time.tv_sec << "."
+    //             << current_time.tv_nsec << std::endl;
+    // }
 
     while ((current_time.tv_sec > next_iteration_time.tv_sec) ||
             (current_time.tv_sec == next_iteration_time.tv_sec &&

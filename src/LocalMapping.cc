@@ -30,7 +30,7 @@
 #define SCHED_EDF_VDSD
 
 #ifdef SCHED_EDF_VDSD
-// #include "EDF_VDSD/edf.h"
+#include "EDF_VDSD/edf.h"
 extern struct timespec release_time;
 #endif /* SCHED_EDF_VDSD */
 
@@ -76,7 +76,7 @@ void LocalMapping::SetTracker(Tracking *pTracker)
 
 void LocalMapping::Run() {
   struct timespec next_iteration_time, current_time;
-  const long long period_ns = 100000000;   // 900 ms
+  const long long period_ns = 100000000;   // 100 ms
   const long long second_ns = 1000000000;  // 1 second
 
   mbFinished = false;
@@ -93,14 +93,14 @@ void LocalMapping::Run() {
   }
 
   struct sched_param sch_params;
-//   sch_params.sched_priority = table_0[LOCAL_MAPPING_THREAD][lm_prio_index];
-//   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
-//     perror("pthread_setschedparam localmapping init");
-//   }
-  sch_params.sched_priority = 45;
-  if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params)) {
+  sch_params.sched_priority = table_0[LOCAL_MAPPING_THREAD][lm_prio_index];
+  if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam localmapping init");
   }
+//   sch_params.sched_priority = 45;
+//   if (pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params)) {
+//     perror("pthread_setschedparam localmapping init");
+//   }
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
