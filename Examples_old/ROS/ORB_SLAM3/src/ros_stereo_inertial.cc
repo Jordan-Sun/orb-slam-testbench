@@ -1149,9 +1149,9 @@ void ImageGrabber::SyncWithImu() {
 
         if ((tImLeft - tImRight) > maxTimeDiff ||
             (tImRight - tImLeft) > maxTimeDiff) {
-          std::cout << "Time misalignment between left and right images: "
-                    << std::fixed << std::setprecision(6) << tImLeft - tImRight
-                    << " s" << std::endl;
+          // std::cout << "Time misalignment between left and right images: "
+          //           << std::fixed << std::setprecision(6) << tImLeft - tImRight
+          //           << " s" << std::endl;
           goto tracking_sleep;
         }
       }
@@ -1159,9 +1159,9 @@ void ImageGrabber::SyncWithImu() {
       tImu = mpImuGb->imuBuf.back()->header.stamp.toSec();
       if (tImLeft > tImu)
       {
-        std::cout << "Time misalignment between IMU and images: "
-                  << std::fixed << std::setprecision(6) << tImLeft - tImu
-                  << " s" << std::endl;
+        // std::cout << "Time misalignment between IMU and images: "
+        //           << std::fixed << std::setprecision(6) << tImLeft - tImu
+        //           << " s" << std::endl;
         goto tracking_sleep;
       }
 

@@ -62,8 +62,8 @@ do
     rosrun ORB_SLAM3 Stereo_Inertial $ORB_SLAM_PATH/Vocabulary/ORBvoc.txt $ORB_SLAM_PATH/Examples_old/Stereo-Inertial/EuRoC.yaml true >> orb_slam.log 2>&1 &
     ORB_PID=$!
 
-    # Sleep for 35 seconds to ensure ORB SLAM starts properly
-    sleep 35
+    # Sleep for 10 seconds to ensure ORB SLAM starts properly
+    sleep 10
 
     # Play the bag file, and kill the ORB SLAM process with SIGINT when done
     rosbag play ~/Downloads/MH_01_easy.bag /cam0/image_raw:=/camera/left/image_raw /cam1/image_raw:=/camera/right/image_raw /imu0:=/imu
