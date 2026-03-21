@@ -67,7 +67,7 @@ void LocalMapping::SetTracker(Tracking *pTracker)
 
 void LocalMapping::Run() {
   struct timespec next_iteration_time, current_time;
-  const long long period_ns = 750000000;   // 900 ms
+  const long long period_ns = 200000000;   // 200 ms
   const long long second_ns = 1000000000;  // 1 second
 
   mbFinished = false;
@@ -80,8 +80,8 @@ void LocalMapping::Run() {
     struct timespec start, end;
     double frame_time = -1;
     clock_gettime(CLOCK_MONOTONIC, &current_time);
-    std::cout << "Local Mapping thread started at " << current_time.tv_sec
-              << "." << current_time.tv_nsec << std::endl;
+    // std::cout << "Local Mapping thread started at " << current_time.tv_sec
+    //           << "." << current_time.tv_nsec << std::endl;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
     // Tracking will see that Local Mapping is busy
@@ -325,10 +325,11 @@ void LocalMapping::Run() {
                     << " missed in Local Mapping, current time "
                     << current_time.tv_sec << "." << current_time.tv_nsec
                     << std::endl;
-        } else {
-          std::cout << "Local Mapping completed at " << current_time.tv_sec
-                    << "." << current_time.tv_nsec << std::endl;
         }
+        // else {
+        //   std::cout << "Local Mapping completed at " << current_time.tv_sec
+        //             << "." << current_time.tv_nsec << std::endl;
+        // }
         next_iteration_time = current_time;
 
         std::pair<double, double> curr_pair =

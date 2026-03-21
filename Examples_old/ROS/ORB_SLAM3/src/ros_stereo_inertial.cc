@@ -366,12 +366,12 @@ void ImuGrabber::m_GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
 
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
-  // Check the pthread id
-  pthread_t tid = pthread_self();
-  printf("This is in my crafted queue Thread ID: %lu\n", (unsigned long)tid);
-  pid_t pid = getpid();
-  printf("This is in my crafted queue Process ID: %d\n", pid);
-  // End Check the pthread
+  // // Check the pthread id
+  // pthread_t tid = pthread_self();
+  // printf("This is in my crafted queue Thread ID: %lu\n", (unsigned long)tid);
+  // pid_t pid = getpid();
+  // printf("This is in my crafted queue Process ID: %d\n", pid);
+  // // End Check the pthread
 
   mBufMutex.lock();
   imuBuf.push(imu_msg);
@@ -408,12 +408,12 @@ void ImuGrabber::imu_thread_function() {
 
 ///////////////////////////////////////////////////////////////
 void ImageGrabber::m_GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
-  // Check the pthread id
-  pthread_t tid = pthread_self();
-  printf("Right image Thread ID: %lu\n", (unsigned long)tid);
-  pid_t pid = getpid();
-  printf("Right image Process ID: %d\n", pid);
-  // End Check the pthread
+  // // Check the pthread id
+  // pthread_t tid = pthread_self();
+  // printf("Right image Thread ID: %lu\n", (unsigned long)tid);
+  // pid_t pid = getpid();
+  // printf("Right image Process ID: %d\n", pid);
+  // // End Check the pthread
 
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
@@ -450,12 +450,12 @@ void ImageGrabber::right_image_thread_function() {
 
 ///////////////////////////////////////////////////////////////
 void ImageGrabber::m_GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
-  // Check the pthread id
-  pthread_t tid = pthread_self();
-  printf("Left image Thread ID: %lu\n", (unsigned long)tid);
-  pid_t pid = getpid();
-  printf("Left image Process ID: %d\n", pid);
-  // End Check the pthread
+  // // Check the pthread id
+  // pthread_t tid = pthread_self();
+  // printf("Left image Thread ID: %lu\n", (unsigned long)tid);
+  // pid_t pid = getpid();
+  // printf("Left image Process ID: %d\n", pid);
+  // // End Check the pthread
 
   struct timespec start, end;
 
@@ -838,7 +838,7 @@ int main(int argc, char** argv) {
                                     &igb);
   std::thread left_img_grab_thread(&ImageGrabber::left_image_thread_function,
                                    &igb);
-  std::thread dummy_thread(&dummy);
+  // std::thread dummy_thread(&dummy);
 
 #ifdef RESTRICT_BANDWIDTH
   std::thread t(update_cpu_utilization);
@@ -867,12 +867,12 @@ int main(int argc, char** argv) {
 }
 
 void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
-  // Check the pthread id
-  pthread_t tid = pthread_self();
-  printf("Left image Thread ID: %lu\n", (unsigned long)tid);
-  pid_t pid = getpid();
-  printf("Left image Process ID: %d\n", pid);
-  // End Check the pthread
+  // // Check the pthread id
+  // pthread_t tid = pthread_self();
+  // printf("Left image Thread ID: %lu\n", (unsigned long)tid);
+  // pid_t pid = getpid();
+  // printf("Left image Process ID: %d\n", pid);
+  // // End Check the pthread
 
   struct timespec start, end;
 
@@ -895,12 +895,12 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr& img_msg) {
 }
 
 void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr& img_msg) {
-  // Check the pthread id
-  pthread_t tid = pthread_self();
-  printf("Right image Thread ID: %lu\n", (unsigned long)tid);
-  pid_t pid = getpid();
-  printf("Right image Process ID: %d\n", pid);
-  // End Check the pthread
+  // // Check the pthread id
+  // pthread_t tid = pthread_self();
+  // printf("Right image Thread ID: %lu\n", (unsigned long)tid);
+  // pid_t pid = getpid();
+  // printf("Right image Process ID: %d\n", pid);
+  // // End Check the pthread
 
   struct timespec start, end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
@@ -943,7 +943,7 @@ void ImageGrabber::SyncWithImu() {
   bool initialized = false; // Creating the first map does take longer, so set start time after initialization
 
   const double maxTimeDiff = 0.01;
-  const long long period_ns = 100000000;   // 100 ms
+  const long long period_ns = 150000000;   // 150 ms
   const long long second_ns = 1000000000;  // 1 second
 
   while (1) {
@@ -952,8 +952,8 @@ void ImageGrabber::SyncWithImu() {
 
     // Time to checkpoint
     clock_gettime(CLOCK_MONOTONIC, &current_time);
-    std::cout << "Sync With IMU thread started at " << current_time.tv_sec
-              << "." << current_time.tv_nsec << std::endl;
+    // std::cout << "Sync With IMU thread started at " << current_time.tv_sec
+    //           << "." << current_time.tv_nsec << std::endl;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
     // Upon fallback, ignore the right image buffer
@@ -1099,10 +1099,11 @@ void ImageGrabber::SyncWithImu() {
                 << current_time.tv_sec << "." << current_time.tv_nsec
                 << std::endl;
       next_iteration_time = current_time;
-    } else {
-      std::cout << "Sync With IMU " << current_iteration << " completed at " << current_time.tv_sec << "."
-                << current_time.tv_nsec << std::endl;
     }
+    // else {
+    //   std::cout << "Sync With IMU " << current_iteration << " completed at " << current_time.tv_sec << "."
+    //             << current_time.tv_nsec << std::endl;
+    // }
 
     // Push back the time spent and frame time
     std::pair<double, double> curr_pair =
@@ -1130,12 +1131,12 @@ void ImuGrabber::GrabImu(const sensor_msgs::ImuConstPtr& imu_msg) {
 
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 
-  // Check the pthread id
-  pthread_t tid = pthread_self();
-  printf("IMU Thread ID: %lu\n", (unsigned long)tid);
-  pid_t pid = getpid();
-  printf("IMU Process ID: %d\n", pid);
-  // End Check the pthread
+  // // Check the pthread id
+  // pthread_t tid = pthread_self();
+  // printf("IMU Thread ID: %lu\n", (unsigned long)tid);
+  // pid_t pid = getpid();
+  // printf("IMU Process ID: %d\n", pid);
+  // // End Check the pthread
 
   mBufMutex.lock();
   imuBuf.push(imu_msg);
