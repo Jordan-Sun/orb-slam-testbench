@@ -84,6 +84,8 @@ vector<std::pair<double, double>> ba_exe_times;
 vector<std::pair<double, double>> fusion_exe_times;
 vector<std::pair<double, double>> loop_closing_exe_times;
 struct timespec release_time;
+// Flag to indicate if the system has switched to monocular mode
+std::atomic<bool> fallback_flag{false};
 
 /*
  * Skip factors to control the periods
@@ -125,9 +127,6 @@ bool ba_period_need_update = false;
 // Max means it will never fallback
 unsigned int current_iteration = 0;
 unsigned int fallback_iteration = std::numeric_limits<unsigned int>::max();
-// Atomic flag to indicate if we are in fallback mode
-std::atomic<bool> fallback_flag{false};
-// Flag to indicate if the system has switched to monocular mode
 bool recovered = false;
 #endif /* FALLBACK_TO_MONO */
 
@@ -1096,12 +1095,9 @@ void ImageGrabber::SyncWithImu() {
 #ifdef SCHED_EDF_VDSD
   // Set initial priority
   size_t prio_index = 0;
-  if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
+  if (pthread_setschedprio(pthread_self(), EDF_ACTIVE_TABLE[SYNC_WITH_IMU_THREAD][prio_index])) {
     perror("pthread_setschedprio syncwithimu");
   }
-  // if (pthread_setschedprio(pthread_self(), 97)) {
-  //   perror("pthread_setschedprio syncwithimu");
-  // }
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
@@ -1296,13 +1292,13 @@ tracking_sleep:
 #ifdef FALLBACK_TO_MONO
     fallback = fallback_flag.load();
 #endif /* FALLBACK_TO_MONO */
-// #ifdef SCHED_EDF_VDSD
-//       prio_index = (prio_index + 1) % table_0[SYNC_WITH_IMU_THREAD].size();
-//       if (pthread_setschedprio(pthread_self(),
-//                                table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
-//         perror("pthread_setschedprio syncwithimu");
-//       }
-// #endif /* SCHED_EDF_VDSD */
+#ifdef SCHED_EDF_VDSD
+      prio_index = (prio_index + 1) % EDF_ACTIVE_TABLE[SYNC_WITH_IMU_THREAD].size();
+      if (pthread_setschedprio(pthread_self(),
+                               EDF_ACTIVE_TABLE[SYNC_WITH_IMU_THREAD][prio_index])) {
+        perror("pthread_setschedprio syncwithimu");
+      }
+#endif /* SCHED_EDF_VDSD */
     clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
                     NULL);
   }

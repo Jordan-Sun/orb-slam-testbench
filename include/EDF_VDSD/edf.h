@@ -1,10 +1,12 @@
 #pragma once
 
+#include <atomic>
 #include <errno.h>
 #include <linux/sched.h>
 #include <pthread.h>
 #include <sched.h>
 #include <sys/syscall.h>
+#include <vector>
 
 enum TaskID {
   SYNC_WITH_IMU_THREAD,
@@ -18,33 +20,20 @@ enum TaskID {
 
 // Ensure all tasks start at the same time for the table to be synchronized
 extern struct timespec release_time;
+extern std::atomic<bool> fallback_flag;
 
 // Multiple reader with no writer so we should be thread safe
 const std::vector<std::vector<int>> table_0 = {
-    {
-        47,
-        44,
-        41,
-        38,
-    },
-    {
-        49,
-        48,
-        47,
-        46,
-        45,
-        44,
-        43,
-        42,
-        41,
-        40,
-        39,
-        38,
-    },
-    {
-        46,
-        42,
-        38,
-    },
+	{ 47, 42, 37, 32, },
+	{ 49, 48, 46, 44, 43, 41, 40, 38, 36, 35, 34, 31, },
+	{ 45, 39, 33, },
 };
+const std::vector<std::vector<int>> table_1 = {
+	{ 47, 44, 41, 38, },
+	{ 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, },
+	{ 46, 42, 38, },
+};
+
+#define EDF_ACTIVE_TABLE (!fallback_flag.load() ? table_0 : table_1)
+
 // Each thread should keep its own indexing to avoid race conditions

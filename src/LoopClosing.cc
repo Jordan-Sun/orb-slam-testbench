@@ -112,7 +112,7 @@ void LoopClosing::Run() {
 
   struct sched_param sch_params;
   size_t prio_index = 0;
-  sch_params.sched_priority = table_0[LOOP_CLOSING_THREAD][prio_index];
+  sch_params.sched_priority = EDF_ACTIVE_TABLE[LOOP_CLOSING_THREAD][prio_index];
   if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params)) {
     perror("pthread_setschedparam loopclosing init");
   }
@@ -400,13 +400,13 @@ void LoopClosing::Run() {
         loop_closing_exe_times.push_back(curr_pair);
 
         // Update priority and sleep until next iteration
-// #ifdef SCHED_EDF_VDSD
-//         prio_index = (prio_index + 1) % table_0[LOOP_CLOSING_THREAD].size();
-//         if (pthread_setschedprio(pthread_self(),
-//                                  table_0[LOOP_CLOSING_THREAD][prio_index])) {
-//           perror("pthread_setschedprio loopclosing");
-//         }
-// #endif /* SCHED_EDF_VDSD */
+#ifdef SCHED_EDF_VDSD
+        prio_index = (prio_index + 1) % EDF_ACTIVE_TABLE[LOOP_CLOSING_THREAD].size();
+        if (pthread_setschedprio(pthread_self(),
+                                 EDF_ACTIVE_TABLE[LOOP_CLOSING_THREAD][prio_index])) {
+          perror("pthread_setschedprio loopclosing");
+        }
+#endif /* SCHED_EDF_VDSD */
         clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_iteration_time,
                         NULL);
     }

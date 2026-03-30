@@ -44,6 +44,7 @@ vector<std::pair<double, double>> tracking_exe_times;
 vector<std::pair<double, double>> ba_exe_times;
 vector<std::pair<double, double>> loop_closing_exe_times;
 struct timespec release_time;
+std::atomic<bool> fallback_flag{false};
 
 bool imu_period_need_update = false;
 bool image_period_need_update = false;
