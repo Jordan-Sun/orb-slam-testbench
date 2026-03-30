@@ -23,10 +23,15 @@ extern struct timespec release_time;
 extern std::atomic<bool> fallback_flag;
 
 // Multiple reader with no writer so we should be thread safe
+const std::vector<std::vector<int>> table_switching_deadline = {
+	{ 49, 43, 38, 32, },
+	{ },
+	{ },
+};
 const std::vector<std::vector<int>> table_0 = {
-	{ 47, 42, 37, 32, },
-	{ 49, 48, 46, 44, 43, 41, 40, 38, 36, 35, 34, 31, },
-	{ 45, 39, 33, },
+	{ 46, 40, 34, 28, },
+	{ 48, 47, 45, 42, 41, 39, 37, 35, 33, 31, 30, 27, },
+	{ 44, 36, 29, },
 };
 const std::vector<std::vector<int>> table_1 = {
 	{ 47, 44, 41, 38, },
@@ -34,6 +39,8 @@ const std::vector<std::vector<int>> table_1 = {
 	{ 46, 42, 38, },
 };
 
+
+#define EDF_SWITCHING_TABLE (!fallback_flag.load() ? table_switching_deadline : table_1)
 #define EDF_ACTIVE_TABLE (!fallback_flag.load() ? table_0 : table_1)
 
 // Each thread should keep its own indexing to avoid race conditions

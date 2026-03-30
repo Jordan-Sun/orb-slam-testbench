@@ -1095,7 +1095,7 @@ void ImageGrabber::SyncWithImu() {
 #ifdef SCHED_EDF_VDSD
   // Set initial priority
   size_t prio_index = 0;
-  if (pthread_setschedprio(pthread_self(), EDF_ACTIVE_TABLE[SYNC_WITH_IMU_THREAD][prio_index])) {
+  if (pthread_setschedprio(pthread_self(), EDF_SWITCHING_TABLE[SYNC_WITH_IMU_THREAD][prio_index])) {
     perror("pthread_setschedprio syncwithimu");
   }
   cpu_set_t cpuset;
@@ -1223,8 +1223,16 @@ void ImageGrabber::SyncWithImu() {
             recovered = true;
             std::cout << " done." << std::endl;
           }
+          // We must be in high criticality mode when doing monocular
+          if (pthread_setschedprio(pthread_self(), table_1[SYNC_WITH_IMU_THREAD][prio_index])) {
+            perror("pthread_setschedprio syncwithimu");
+          }
           mpSLAM->TrackMonocular(imLeft, tImLeft, vImuMeas);
         } else {
+          // We must be in low criticality mode when doing stereo
+          if (pthread_setschedprio(pthread_self(), table_0[SYNC_WITH_IMU_THREAD][prio_index])) {
+            perror("pthread_setschedprio syncwithimu");
+          }
           mpSLAM->TrackStereo(imLeft, imRight, tImLeft, vImuMeas);
         }
 #else
