@@ -980,16 +980,16 @@ void ImageGrabber::SyncWithImu() {
 
         if ((tImLeft - tImRight) > maxTimeDiff ||
             (tImRight - tImLeft) > maxTimeDiff) {
-          std::cout << "Stereo Image sync fail: " << tImLeft - tImRight << "."
-                    << std::endl;
-          continue;
+          // std::cout << "Stereo Image sync fail: " << tImLeft - tImRight << "."
+          //           << std::endl;
+          goto tracking_sleep;
         }
       }
 
       if (tImLeft > mpImuGb->imuBuf.back()->header.stamp.toSec()) {
-        std::cout << "IMU Image sync fail: " << tImLeft - tImRight << "."
-                  << std::endl;
-        continue;
+        // std::cout << "IMU Image sync fail: " << tImLeft - tImRight << "."
+        //           << std::endl;
+        goto tracking_sleep;
       }
 
       this->mBufMutexLeft.lock();
@@ -1068,11 +1068,12 @@ void ImageGrabber::SyncWithImu() {
       }
     }
 
+    // End of Tracking
+tracking_sleep:
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
     time_spent = (end.tv_sec - start.tv_sec) * 1000.0 +
                  (end.tv_nsec - start.tv_nsec) / 1000000.0;
 
-    // End of Tracking
     if (!initialized) {
       // Set the start time after initialization
       clock_gettime(CLOCK_MONOTONIC, &next_iteration_time);
